@@ -1,0 +1,32 @@
+# Doxyfile minimo para el proyecto ARQC — Sistema de Control de Acceso
+# Generar documentacion:  doxygen Doxyfile   (salida en docs/html/)
+
+PROJECT_NAME           = "ARQC - Control de Acceso y Confort Termico"
+PROJECT_BRIEF          = "Sistema embebido Arduino - Universidad del Cauca"
+OUTPUT_DIRECTORY       = docs/html
+INPUT                  = src include
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.hpp *.c *.cpp *.ino
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = NO
+ALIASES                = "bug={\\bug}"
+OPTIMIZE_OUTPUT_FOR_C  = YES
+OPTIMIZE_OUTPUT_JAVA   = NO
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+HAVE_DOT               = NO
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = YES
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES

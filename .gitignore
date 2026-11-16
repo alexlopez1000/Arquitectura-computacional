@@ -1,0 +1,23 @@
+# PlatformIO / Arduino build artifacts
+.pio/
+build/
+*.elf
+*.hex
+*.bin
+*.map
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Doxygen generated output (se versiona el Doxyfile, no el HTML)
+docs/html/
+docs/latex/
+doxygen_output/
+
+# Temporales de extraccion de material
+_txt/
+_tmp/
