@@ -72,6 +72,42 @@ final (mínimo 4 requeridos por la plantilla).
   - `doxygen Doxyfile`
 - **Pendiente:** instalar PlatformIO IDE/CLI y Doxygen antes de la
   entrega para validar compilación y generar `docs/html`.
+- **Actualización:** PlatformIO ya está instalado y operativo en el
+  entorno (`pio run -e megaatmega2560` compila con SUCCESS tras
+  resolver H-08). Doxygen sigue pendiente.
+
+## H-08 — Resolución de dependencias: PlatformIO vs Arduino IDE
+
+- **Problema:** en Arduino IDE las librerías del curso
+  (`LiquidCrystal`, `Average`) vienen preinstaladas o se instalan a
+  mano desde el gestor de librerías. En PlatformIO cada dependencia
+  debe declararse explícitamente; la compilación real
+  (`pio run -e megaatmega2560`) falló con
+  `fatal error: LiquidCrystal.h` y `fatal error: Average.h` porque
+  ninguna estaba declarada en `lib_deps`.
+- **Solución:**
+  - `LiquidCrystal` → declarada como
+    `arduino-libraries/LiquidCrystal@^1.0.7` en `platformio.ini`
+    (paquete oficial equivalente a la librería estándar de Arduino
+    IDE).
+  - `Average` → la versión exacta del curso no está en el registro
+    de PlatformIO, así que `Average-master.zip` se extrajo a
+    `lib/Average/` (convención de librería local de PlatformIO).
+    `lib/` NO está en `.gitignore`, por lo que queda versionada en
+    Git; solo se excluyeron `examples/` y el `.gitignore` propio del
+    paquete.
+  - `Keypad` (chris--a) → verificado que NO se necesita: el proyecto
+    no incluye `<Keypad.h>`; el escaneo matricial se implementa de
+    forma propia en `KeypadReader` según el patrón de bitmask de
+    puerto de la clase 10.
+- **Resultado:** `pio run -e megaatmega2560` → SUCCESS
+  (Flash 0.7%, RAM 2.3%).
+- **Lección para el informe:** PlatformIO exige declarar cada
+  dependencia en `platformio.ini` (`lib_deps`) o proveerla como
+  librería local en `lib/`; las librerías "incluidas" de Arduino IDE
+  no existen por defecto. Alternativa documentable: declarar
+  `lib_deps = ... @ file://Average-master.zip` si se prefiere no
+  versionar `lib/`.
 
 ---
 
