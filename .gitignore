@@ -1,6 +1,7 @@
 # PlatformIO / Arduino build artifacts
 .pio/
 build/
+compile_commands.json
 *.elf
 *.hex
 *.bin
