@@ -70,11 +70,14 @@ final (mínimo 4 requeridos por la plantilla).
   pendientes para cuando se instale el toolchain:
   - `pio run -e megaatmega2560`
   - `doxygen Doxyfile`
-- **Pendiente:** instalar PlatformIO IDE/CLI y Doxygen antes de la
-  entrega para validar compilación y generar `docs/html`.
-- **Actualización:** PlatformIO ya está instalado y operativo en el
-  entorno (`pio run -e megaatmega2560` compila con SUCCESS tras
-  resolver H-08). Doxygen sigue pendiente.
+- **Actualización:** RESUELTO. PlatformIO y Doxygen ya están
+  instalados y operativos en el equipo:
+  - `pio run -e megaatmega2560` → SUCCESS (tras resolver H-08).
+  - `doxygen Doxyfile` → ejecutado con **0 warnings**; generó
+    `docs/html/` sin errores. Se agregaron comentarios `///<` a las
+    macros de `include/config.h` y docblocks `@brief` a
+    `setup()`/`loop()` en `src/main.cpp` para eliminar las últimas
+    advertencias.
 
 ## H-08 — Resolución de dependencias: PlatformIO vs Arduino IDE
 

@@ -30,6 +30,13 @@
 /** Scheduler global con capacidad para las 8 tareas del diseno. */
 static TaskScheduler scheduler(8);
 
+/**
+ * @brief Inicializacion del sistema (una sola vez al arrancar).
+ *
+ * Configura Serial y, en implementaciones futuras, instancia los
+ * modulos con los pines de config.h y registra las tareas periodicas
+ * en el scheduler global.
+ */
 void setup() {
     Serial.begin(9600);
     // TODO [PENDIENTE D-05]: inicializar modulos con pines de config.h.
@@ -45,6 +52,12 @@ void setup() {
     // scheduler.addTask("schedule",  taskSchedule,  TASK_PERIOD_SCHEDULE_MS);
 }
 
+/**
+ * @brief Bucle principal: despacha las tareas asincronas.
+ *
+ * Llamado repetidamente por el nucleo de Arduino; delega en
+ * TaskScheduler::update() sin bloquear el procesador.
+ */
 void loop() {
     scheduler.update(); // Despacho no bloqueante de tareas.
 }

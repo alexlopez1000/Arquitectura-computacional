@@ -21,23 +21,23 @@
 /* ================================================================
  *  LCD 16x2  [ESTANDAR DE CLASE: ARQC_Clase_10_KEYPAD_LCD.pdf]
  * ================================================================ */
-#define PIN_LCD_RS   8
-#define PIN_LCD_EN   9
-#define PIN_LCD_D4   10
-#define PIN_LCD_D5   11
-#define PIN_LCD_D6   12
-#define PIN_LCD_D7   13
-#define LCD_COLUMNS  16
-#define LCD_ROWS     2
+#define PIN_LCD_RS   8   ///< Pin RS del LCD 16x2
+#define PIN_LCD_EN   9   ///< Pin EN (enable) del LCD 16x2
+#define PIN_LCD_D4   10  ///< Pin dato D4 del LCD (modo 4 bits)
+#define PIN_LCD_D5   11  ///< Pin dato D5 del LCD (modo 4 bits)
+#define PIN_LCD_D6   12  ///< Pin dato D6 del LCD (modo 4 bits)
+#define PIN_LCD_D7   13  ///< Pin dato D7 del LCD (modo 4 bits)
+#define LCD_COLUMNS  16  ///< Columnas del display LCD
+#define LCD_ROWS     2   ///< Filas del display LCD
 
 /* ================================================================
  *  TECLADO MATRICIAL 4x4
  *  TODO [PENDIENTE D-05]: pinout pendiente de conexion real.
  * ================================================================ */
-#define KEYPAD_NUM_ROWS 4
-#define KEYPAD_NUM_COLS 4
-#define PIN_KEYPAD_ROWS {30, 31, 32, 33}
-#define PIN_KEYPAD_COLS {34, 35, 36, 37}
+#define KEYPAD_NUM_ROWS 4          ///< Numero de filas del teclado matricial
+#define KEYPAD_NUM_COLS 4          ///< Numero de columnas del teclado matricial
+#define PIN_KEYPAD_ROWS {30, 31, 32, 33} ///< Pines de las filas del teclado (salidas)
+#define PIN_KEYPAD_COLS {34, 35, 36, 37} ///< Pines de las columnas del teclado (entradas)
 
 /* ================================================================
  *  RFID MFRC522  [ESTANDAR DE CLASE: rfid-master.zip]
@@ -90,7 +90,7 @@
 
 /** Longitud minima de la clave numerica [CONFIRMADO: al menos 4 digitos]. */
 #define MIN_KEY_LENGTH            4
-#define MAX_KEY_LENGTH            8
+#define MAX_KEY_LENGTH            8   ///< Longitud maxima de la clave numerica
 
 /** Usos de una clave antes de exigir cambio [CONFIRMADO: 4 usos]. */
 #define KEY_MAX_USES              4
@@ -100,25 +100,25 @@
 
 /* TODO [PENDIENTE D-04]: periodo de cada tarea asincrona.
  * Valores iniciales propuestos; ajustar al framework elegido. */
-#define TASK_PERIOD_FSM_MS        20UL
-#define TASK_PERIOD_KEYPAD_MS     30UL
-#define TASK_PERIOD_RFID_MS       100UL
-#define TASK_PERIOD_SENSORS_MS    2000UL
-#define TASK_PERIOD_COMFORT_MS    1000UL
-#define TASK_PERIOD_UI_MS         200UL
-#define TASK_PERIOD_STORAGE_MS    5000UL
-#define TASK_PERIOD_SCHEDULE_MS   1000UL
+#define TASK_PERIOD_FSM_MS        20UL    ///< Periodo de la tarea de la FSM (ms)
+#define TASK_PERIOD_KEYPAD_MS     30UL    ///< Periodo del escaneo de teclado (ms)
+#define TASK_PERIOD_RFID_MS       100UL   ///< Periodo de lectura RFID (ms)
+#define TASK_PERIOD_SENSORS_MS    2000UL  ///< Periodo de lectura de sensores ambientales (ms)
+#define TASK_PERIOD_COMFORT_MS    1000UL  ///< Periodo del controlador de confort (ms)
+#define TASK_PERIOD_UI_MS         200UL   ///< Periodo de actualizacion del display (ms)
+#define TASK_PERIOD_STORAGE_MS    5000UL  ///< Periodo de persistencia EEPROM (ms)
+#define TASK_PERIOD_SCHEDULE_MS   1000UL  ///< Periodo de validacion de horario (ms)
 
 /* TODO [PENDIENTE D-03]: metodo de conteo de personas.
  * Si se usa HC-SR04: distancia umbral para contar persona. */
-#define PEOPLE_COUNT_THRESHOLD_CM 150.0f
+#define PEOPLE_COUNT_THRESHOLD_CM 150.0f ///< Distancia umbral HC-SR04 para contar persona (cm)
 
 /* TODO [PENDIENTE D-02]: umbrales de confort termico.
  * Propuesta inicial: rangos configurables hasta confirmar formula. */
-#define COMFORT_TEMP_MIN_C        18.0f
-#define COMFORT_TEMP_MAX_C        26.0f
-#define COMFORT_HUM_MIN_PCT       40.0f
-#define COMFORT_HUM_MAX_PCT       60.0f
-#define COMFORT_PEOPLE_MAX        8
+#define COMFORT_TEMP_MIN_C        18.0f   ///< Temperatura minima de confort (C)
+#define COMFORT_TEMP_MAX_C        26.0f   ///< Temperatura maxima de confort (C)
+#define COMFORT_HUM_MIN_PCT       40.0f   ///< Humedad minima de confort (%)
+#define COMFORT_HUM_MAX_PCT       60.0f   ///< Humedad maxima de confort (%)
+#define COMFORT_PEOPLE_MAX        8       ///< Aforo maximo de personas
 
 #endif /* CONFIG_H */
