@@ -21,3 +21,10 @@ doxygen_output/
 # Temporales de extraccion de material
 _txt/
 _tmp/
+
+# Material de referencia del curso (no versionar en GitHub)
+*.pdf
+*.zip
+*.ino
+*.PNG
+*.png
