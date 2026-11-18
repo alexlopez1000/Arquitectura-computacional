@@ -48,7 +48,7 @@ void AccessFSM::begin() {
 
 void AccessFSM::onCardDetected(const RfidUid& uid) {
     if (state() != FsmState::IDLE || input_ != Input::NONE) return;
-    const int8_t user = auth_.validateCard(uid.bytes);
+    const int8_t user = auth_.validateCard(uid);
     if (user >= 0) {
         user_ = user;
         input_ = Input::CARD_OK;

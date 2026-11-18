@@ -209,6 +209,62 @@ final (mínimo 4 requeridos por la plantilla).
 - **Verificación:** `pio run -e megaatmega2560` y `doxygen Doxyfile`
   con 0 errores y 0 warnings.
 
+## H-11 — UID RFID de 4/7 bytes y simulación virtual en Wokwi
+
+- **UID de 4 o 7 bytes:** `RfidUid` (`src/RfidUid.h`) guarda
+  `bytes[RFID_UID_MAX_SIZE]` (7) y `size`. Solo se aceptan longitudes
+  4 (MIFARE Classic) o 7 (Ultralight/NTAG). `RfidReader::poll()`
+  descarta otros tamaños, y los bytes sobrantes valen `0x00`.
+  `rfidUidEquals()` compara longitud y los 7 bytes con relleno
+  `0x00`. `main.cpp` imprime por Serial solo los `uid.size` bytes
+  leídos, más la longitud.
+- **EEPROM:** `UserRecord` guarda el `RfidUid` completo (UID + longitud).
+  `EEPROM_LAYOUT_VERSION` pasa de 1 a 2, así que una imagen con el
+  layout de 4 bytes no se acepta y se reescriben los usuarios por
+  defecto.
+- **Usuarios por defecto** (coinciden con tarjetas predefinidas del
+  lector de Wokwi):
+
+  | Tarjeta Wokwi | UID | Perfil | Clave |
+  |---|---|---|---|
+  | Blue Card | `01:02:03:04` | Seguridad | `1234` |
+  | Green Card | `11:22:33:44` | Operario | `5678` |
+  | NFC Tag (7 bytes) | `04:11:22:33:44:55:66` | Gerente | `2468` |
+
+  Red y Yellow Card no están registradas (sirven para probar `ERR`/`ALR`).
+  En el laboratorio, cambiar los UID por los de las tarjetas reales e
+  incrementar `EEPROM_LAYOUT_VERSION`.
+- **Entorno `[env:wokwi]`** (`platformio.ini`): hereda de
+  `megaatmega2560` y agrega dos `-D`:
+  - `DHT_TYPE=DHT22`: Wokwi solo simula DHT22, y su trama decodificada
+    como DHT11 da valores erróneos (p. ej. 24 °C / 40 % → −1 °C / 15 %).
+  - `LDR_ADC_RISES_WITH_DARK=1`: el módulo LDR de Wokwi da mayor ADC
+    con más oscuridad; el firmware lo invierte (`1023 − ADC`) para
+    mantener la convención mayor = más luz.
+  El firmware del hardware real sigue siendo `pio run -e megaatmega2560`.
+- **`wokwi.toml`:** apunta a `.pio/build/wokwi/firmware.hex` y
+  `firmware.elf`. Compilar con `pio run -e wokwi` y abrir con la
+  extensión Wokwi de VS Code (o `wokwi-cli`).
+- **`diagram.json`** (cableado según `docs/02_pinout.md`):
+
+  | Componente Wokwi | Conexión al Mega |
+  |---|---|
+  | `board-mfrc522` | SDA(SS)=53, SCK=52, MOSI=51, MISO=50, RST=5, 3.3V, GND |
+  | `wokwi-lcd1602` (4 bits) | RS=8, E=9, D4–D7=10–13, RW/V0/K=GND, VDD=5V, A=5V vía 220 Ω |
+  | `wokwi-membrane-keypad` | R1–R4=30–33, C1–C4=34–37 |
+  | `wokwi-dht22` | SDA=22 |
+  | `wokwi-photoresistor-sensor` | AO=A0 |
+  | `wokwi-potentiometer` (sensor auxiliar) | SIG=A1 |
+  | `wokwi-led` verde / rojo + 220 Ω | 7 / 6 |
+  | `wokwi-buzzer` | 48 |
+  | `wokwi-slide-switch` (Hall) | común=40, lado 1=GND (LOW = puerta cerrada) |
+  | `wokwi-led` azul / amarillo + 220 Ω | 44 ventilación / 46 iluminación |
+
+  El lector se llama `board-mfrc522` en Wokwi (no `wokwi-mfrc522`).
+  Los LED 44/46 representan los relés con `RELAY_ACTIVE_LEVEL = HIGH`.
+- **Verificación:** `pio run -e megaatmega2560`, `pio run -e wokwi` y
+  `doxygen Doxyfile` con 0 errores y 0 warnings.
+
 ---
 
 ## Optimizaciones propuestas (borrador para el informe)

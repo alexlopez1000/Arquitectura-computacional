@@ -54,11 +54,13 @@ static void runRfid() {
     if (!rfid.poll()) return;
     const RfidUid uid = rfid.lastUid();
     Serial.print(F("UID:"));
-    for (uint8_t i = 0; i < sizeof(uid.bytes); i++) {
+    for (uint8_t i = 0; i < uid.size; i++) {
         Serial.print(uid.bytes[i] < 0x10 ? F(" 0") : F(" "));
         Serial.print(uid.bytes[i], HEX);
     }
-    Serial.println();
+    Serial.print(F(" ("));
+    Serial.print(uid.size);
+    Serial.println(F(" bytes)"));
     fsm.onCardDetected(uid);
 }
 

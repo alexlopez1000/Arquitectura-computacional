@@ -1,0 +1,6 @@
+# Simulacion Wokwi (VS Code: extension "Wokwi Simulator"; CLI: wokwi-cli).
+# Compilar antes: pio run -e wokwi (DHT22 + LDR invertido). Ver docs/03_hallazgos.md, H-11.
+[wokwi]
+version = 1
+firmware = '.pio/build/wokwi/firmware.hex'
+elf = '.pio/build/wokwi/firmware.elf'

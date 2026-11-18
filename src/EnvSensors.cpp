@@ -25,8 +25,11 @@ void EnvSensors::update() {
         current_.temperatureC = t;
         current_.humidityPct = h;
     }
-    current_.lightLevel = static_cast<uint16_t>(
-        lightAvg_.rolling(static_cast<uint16_t>(analogRead(PIN_LDR))) + 0.5f);
+    uint16_t ldrRaw = static_cast<uint16_t>(analogRead(PIN_LDR));
+#if LDR_ADC_RISES_WITH_DARK
+    ldrRaw = 1023U - ldrRaw;
+#endif
+    current_.lightLevel = static_cast<uint16_t>(lightAvg_.rolling(ldrRaw) + 0.5f);
     current_.auxLevel = static_cast<uint16_t>(
         auxAvg_.rolling(static_cast<uint16_t>(analogRead(PIN_ANALOG_AUX))) + 0.5f);
     current_.timestampMs = millis();

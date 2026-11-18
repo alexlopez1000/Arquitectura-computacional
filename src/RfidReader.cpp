@@ -19,13 +19,17 @@ bool RfidReader::poll() {
     if (!mfrc522_.PICC_IsNewCardPresent() || !mfrc522_.PICC_ReadCardSerial()) {
         return false;
     }
-    memset(lastUid_.bytes, 0, sizeof(lastUid_.bytes));
-    const uint8_t n = mfrc522_.uid.size < sizeof(lastUid_.bytes)
-                          ? mfrc522_.uid.size : sizeof(lastUid_.bytes);
-    memcpy(lastUid_.bytes, mfrc522_.uid.uidByte, n);
+    RfidUid uid;
+    memset(&uid, 0, sizeof(uid));
+    uid.size = mfrc522_.uid.size;
+    const bool valid = rfidUidIsValid(uid);
+    if (valid) {
+        memcpy(uid.bytes, mfrc522_.uid.uidByte, uid.size);
+        lastUid_ = uid;
+    }
     mfrc522_.PICC_HaltA();
     mfrc522_.PCD_StopCrypto1();
-    return true;
+    return valid;
 }
 
 RfidUid RfidReader::lastUid() const { return lastUid_; }

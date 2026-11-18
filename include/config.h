@@ -42,6 +42,9 @@
  * ================================================================ */
 #define PIN_RFID_SS   53   ///< SDA/SS del RC522
 #define PIN_RFID_RST  5    ///< RST del RC522
+#define RFID_UID_SIZE_SINGLE 4 ///< Longitud de UID MIFARE Classic (bytes)
+#define RFID_UID_SIZE_DOUBLE 7 ///< Longitud de UID MIFARE Ultralight/NTAG (bytes)
+#define RFID_UID_MAX_SIZE    7 ///< Bytes reservados por UID
 
 /* ================================================================
  *  SENSOR DE EFECTO HALL (estado de puerta)
@@ -52,7 +55,9 @@
  *  SENSORES AMBIENTALES
  * ================================================================ */
 #define PIN_DHT       22   ///< DHT11 temperatura y humedad
-#define DHT_TYPE      DHT11 ///< Modelo del sensor DHT
+#ifndef DHT_TYPE
+#define DHT_TYPE      DHT11 ///< Modelo del sensor DHT (el entorno wokwi usa DHT22)
+#endif
 #define PIN_LDR       A0   ///< Sensor de luz LDR (divisor resistivo, ADC)
 #define PIN_ANALOG_AUX A1  ///< Sensor analogico adicional trabajado en clase (ADC)
 #define ANALOG_AVG_SAMPLES 8 ///< Muestras del promedio movil (libreria Average)
@@ -90,7 +95,7 @@
  * ================================================================ */
 #define EEPROM_BASE_ADDR       0        ///< Direccion base de la imagen de usuarios
 #define EEPROM_MAGIC           0xAC55U  ///< Firma de imagen valida
-#define EEPROM_LAYOUT_VERSION  1        ///< Version del esquema de datos persistido
+#define EEPROM_LAYOUT_VERSION  2        ///< Version del esquema de datos persistido (2: UID de 4/7 bytes)
 
 /* ================================================================
  *  CONFORT TERMICO: PMV (Fanger, ISO 7730)
@@ -105,6 +110,9 @@
 /* ================================================================
  *  ILUMINACION AUTOMATICA (LDR, ADC 0-1023; mayor = mas luz)
  * ================================================================ */
+#ifndef LDR_ADC_RISES_WITH_DARK
+#define LDR_ADC_RISES_WITH_DARK 0 ///< 1 si el ADC del LDR sube con la oscuridad (modulo Wokwi); se invierte a mayor = mas luz
+#endif
 #define LIGHT_ON_BELOW_ADC     300      ///< Enciende iluminacion por debajo de este nivel
 #define LIGHT_OFF_ABOVE_ADC    400      ///< Apaga iluminacion por encima de este nivel
 

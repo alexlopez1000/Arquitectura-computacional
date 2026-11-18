@@ -30,10 +30,10 @@ public:
 
     /**
      * @brief Factor 1: valida la tarjeta presentada.
-     * @param uid NUID de 4 bytes.
+     * @param uid UID leido (4 o 7 bytes).
      * @return Indice del usuario o -1 si la tarjeta no esta registrada.
      */
-    int8_t validateCard(const uint8_t uid[4]) const;
+    int8_t validateCard(const RfidUid& uid) const;
 
     /**
      * @brief Factor 2: valida la contrasena del usuario ya identificado.

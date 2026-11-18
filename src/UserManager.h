@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include "config.h"
 #include "NvmStorage.h"
+#include "RfidUid.h"
 
 /** Perfiles de la empresa; cada uno de los 3 usuarios tiene uno distinto. */
 enum class Profile : uint8_t {
@@ -21,7 +22,7 @@ enum class Profile : uint8_t {
 
 /** Registro persistido de un usuario (tamano fijo, sin memoria dinamica). */
 struct UserRecord {
-    uint8_t rfidUid[4];                      ///< NUID de la tarjeta RFID.
+    RfidUid uid;                             ///< UID de la tarjeta (4 o 7 bytes + longitud).
     Profile profile;                         ///< Perfil asignado.
     char    password[MAX_PASSWORD_LENGTH + 1]; ///< Contrasena numerica (terminada en '\\0').
 };
@@ -50,10 +51,10 @@ public:
 
     /**
      * @brief Busca un usuario por UID RFID.
-     * @param uid NUID de 4 bytes.
+     * @param uid UID leido (4 o 7 bytes).
      * @return Indice del usuario (0..NUM_USERS-1) o -1 si no existe.
      */
-    int8_t findByUid(const uint8_t uid[4]) const;
+    int8_t findByUid(const RfidUid& uid) const;
 
     /**
      * @brief Compara la contrasena del usuario indicado.

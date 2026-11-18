@@ -7,7 +7,7 @@
 
 AuthManager::AuthManager(UserManager& users) : users_(users), failedAttempts_(0) {}
 
-int8_t AuthManager::validateCard(const uint8_t uid[4]) const {
+int8_t AuthManager::validateCard(const RfidUid& uid) const {
     return users_.findByUid(uid);
 }
 

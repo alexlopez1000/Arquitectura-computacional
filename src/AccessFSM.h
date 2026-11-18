@@ -89,7 +89,7 @@ public:
 
     /**
      * @brief Evento de tarjeta RFID leida (solo se procesa en IDLE).
-     * @param uid NUID leido.
+     * @param uid UID leido (4 o 7 bytes).
      */
     void onCardDetected(const RfidUid& uid);
 

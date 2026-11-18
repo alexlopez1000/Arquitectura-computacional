@@ -8,14 +8,16 @@
 
 namespace {
 /**
- * Usuarios por defecto. Reemplazar los UID por los de las tarjetas
- * reales (el UID de cualquier tarjeta leida se imprime por Serial) e
+ * Usuarios por defecto, alineados con las tarjetas predefinidas del
+ * MFRC522 de Wokwi (Blue Card, Green Card y NFC Tag de 7 bytes).
+ * Para hardware real, reemplazar los UID por los de las tarjetas
+ * (el UID de cualquier tarjeta leida se imprime por Serial) e
  * incrementar EEPROM_LAYOUT_VERSION para forzar su reescritura.
  */
 const UserRecord kDefaultUsers[NUM_USERS] PROGMEM = {
-    { {0xA1, 0xB2, 0xC3, 0xD4}, Profile::SECURITY, "1234" },
-    { {0x11, 0x22, 0x33, 0x44}, Profile::OPERATOR, "5678" },
-    { {0xDE, 0xAD, 0xBE, 0xEF}, Profile::MANAGER,  "2468" },
+    { { {0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00}, 4 }, Profile::SECURITY, "1234" },
+    { { {0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00}, 4 }, Profile::OPERATOR, "5678" },
+    { { {0x04, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66}, 7 }, Profile::MANAGER,  "2468" },
 };
 
 bool isValidPassword(const char* pwd) {
@@ -43,9 +45,9 @@ void UserManager::restoreDefaults() {
     storage_.save(users_, sizeof(users_));
 }
 
-int8_t UserManager::findByUid(const uint8_t uid[4]) const {
+int8_t UserManager::findByUid(const RfidUid& uid) const {
     for (int8_t i = 0; i < NUM_USERS; i++) {
-        if (memcmp(users_[i].rfidUid, uid, sizeof(users_[i].rfidUid)) == 0) {
+        if (rfidUidEquals(users_[i].uid, uid)) {
             return i;
         }
     }

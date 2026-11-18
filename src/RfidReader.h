@@ -12,15 +12,11 @@
 #include <Arduino.h>
 #include <MFRC522.h>
 #include "config.h"
-
-/** NUID de una tarjeta RFID MIFARE. */
-struct RfidUid {
-    uint8_t bytes[4]; ///< Identificador unico de 4 bytes.
-};
+#include "RfidUid.h"
 
 /**
  * @class RfidReader
- * @brief Detecta tarjetas nuevas y entrega su NUID.
+ * @brief Detecta tarjetas nuevas y entrega su UID (4 o 7 bytes).
  *
  * La validacion del UID corresponde a AuthManager (bajo acoplamiento).
  */
@@ -39,14 +35,15 @@ public:
     void begin();
 
     /**
-     * @brief Comprueba si hay una tarjeta nueva y lee su NUID.
-     *        Llamar desde la tarea RFID.
-     * @return true si se leyo una tarjeta nueva.
+     * @brief Comprueba si hay una tarjeta nueva y lee su UID.
+     *        Llamar desde la tarea RFID. Las tarjetas con UID distinto
+     *        de 4 o 7 bytes se descartan.
+     * @return true si se leyo una tarjeta nueva con UID soportado.
      */
     bool poll();
 
     /**
-     * @brief NUID de la ultima tarjeta leida.
+     * @brief UID de la ultima tarjeta leida.
      * @return Copia del UID.
      */
     RfidUid lastUid() const;
