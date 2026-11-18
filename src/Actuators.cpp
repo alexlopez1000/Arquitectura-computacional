@@ -6,6 +6,11 @@
 #include "Actuators.h"
 #include "config.h"
 
+namespace {
+const uint8_t kRelayOn  = RELAY_ACTIVE_LEVEL;
+const uint8_t kRelayOff = (RELAY_ACTIVE_LEVEL == HIGH) ? LOW : HIGH;
+} // namespace
+
 Actuators::Actuators()
     : signal_(AccessSignal::NONE), signalStartMs_(0),
       fanOn_(false), lightOn_(false), buzzerOn_(false) {}
@@ -25,7 +30,7 @@ void Actuators::setAccessSignal(AccessSignal signal) {
     signal_ = signal;
     signalStartMs_ = millis();
     digitalWrite(PIN_LED_GREEN, signal == AccessSignal::GRANTED ? HIGH : LOW);
-    digitalWrite(PIN_LED_RED, signal == AccessSignal::ALARM ? HIGH : LOW);
+    digitalWrite(PIN_LED_RED, (signal == AccessSignal::DENIED || signal == AccessSignal::ALARM) ? HIGH : LOW);
     buzzerOn_ = true;  // fuerza la actualizacion del tono
     buzzer(false, 0);
     update();
@@ -33,12 +38,12 @@ void Actuators::setAccessSignal(AccessSignal signal) {
 
 void Actuators::setFan(bool on) {
     fanOn_ = on;
-    digitalWrite(PIN_FAN, on ? RELAY_ACTIVE_LEVEL : !RELAY_ACTIVE_LEVEL);
+    digitalWrite(PIN_FAN, on ? kRelayOn : kRelayOff);
 }
 
 void Actuators::setLight(bool on) {
     lightOn_ = on;
-    digitalWrite(PIN_LIGHT_OUT, on ? RELAY_ACTIVE_LEVEL : !RELAY_ACTIVE_LEVEL);
+    digitalWrite(PIN_LIGHT_OUT, on ? kRelayOn : kRelayOff);
 }
 
 bool Actuators::fanOn() const { return fanOn_; }

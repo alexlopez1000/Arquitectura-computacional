@@ -180,6 +180,35 @@ final (mínimo 4 requeridos por la plantilla).
 - **Verificación:** `pio run -e megaatmega2560` → SUCCESS, 0 warnings
   (RAM 11.5 %, Flash 8.4 %); `doxygen Doxyfile` → 0 warnings.
 
+## H-10 — Revisión previa al montaje físico
+
+- **LED rojo en `ERR`:** `Actuators::setAccessSignal()` solo
+  encendía `PIN_LED_RED` con `AccessSignal::ALARM`, así que un acceso
+  denegado (`ERR`, señal `DENIED`) solo sonaba el buzzer, contra la
+  especificación (denegado = LED rojo + buzzer).
+  - **Solución:** el LED rojo se enciende con `DENIED` o `ALARM`.
+- **Polaridad de relés:** `RELAY_ACTIVE_LEVEL` (`include/config.h`,
+  por defecto `HIGH`) define el nivel que activa los módulos relé.
+  `setFan()` y `setLight()` derivan de ella los niveles de encendido
+  y apagado, así que un módulo activo en bajo solo requiere cambiar
+  la macro a `LOW`.
+- **Supuestos del modelo PMV (ISO 7730):** el DHT11 solo mide `Ta` y
+  `HR`; el resto de variables de Fanger se fijan:
+  - `Tr = Ta`: sin sensor de globo; se asume recinto interior sin
+    superficies calientes/frías ni radiación solar directa.
+  - `v = 0.1 m/s`: aire casi quieto, típico de oficina sin
+    ventilador encendido. Con la ventilación activa la velocidad real
+    sube, por lo que el PMV calculado sobreestima el calor; la
+    histéresis (OFF en `PMV ≤ +0.2`) limita ese efecto.
+  - `M = 1.2 met`: actividad sedentaria/de pie ligera.
+  - `Icl = 0.5 clo`: ropa ligera de verano.
+  - `W = 0`: sin trabajo mecánico externo.
+  - ISO 7730 recomienda el PMV para `10–30 °C` y `HR 30–70 %`; fuera
+    de ese rango el valor es indicativo. La precisión del DHT11
+    (±2 °C, ±5 % HR) se traslada al PMV.
+- **Verificación:** `pio run -e megaatmega2560` y `doxygen Doxyfile`
+  con 0 errores y 0 warnings.
+
 ---
 
 ## Optimizaciones propuestas (borrador para el informe)

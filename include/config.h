@@ -65,7 +65,7 @@
 #define PIN_BUZZER    48   ///< Buzzer de acceso/alarma
 #define PIN_LED_RED   6    ///< LED rojo: acceso denegado / bloqueo
 #define PIN_LED_GREEN 7    ///< LED verde: acceso permitido
-#define RELAY_ACTIVE_LEVEL HIGH ///< Nivel logico que activa los reles
+#define RELAY_ACTIVE_LEVEL HIGH ///< Nivel logico que activa los modulos rele (HIGH o LOW).
 
 /* ================================================================
  *  CONTROL DE ACCESO (2FA: RFID + contrasena)
