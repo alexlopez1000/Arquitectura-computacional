@@ -1,25 +1,27 @@
 /**
  * @file AuthManager.cpp
- * @brief Implementacion del gestor de autenticacion.
+ * @brief Implementacion del gestor de autenticacion 2FA.
  */
 
 #include "AuthManager.h"
 
-AuthManager::AuthManager() : failedAttempts_(0) {}
+AuthManager::AuthManager(UserManager& users) : users_(users), failedAttempts_(0) {}
 
-void AuthManager::begin() {
-    // TODO [PENDIENTE D-01]: inyectar UserManager/ScheduleValidator.
+int8_t AuthManager::validateCard(const uint8_t uid[4]) const {
+    return users_.findByUid(uid);
 }
 
-AuthResult AuthManager::authenticate(const Credential& cred) {
-    // TODO [PENDIENTE D-01]: regla de combinacion RFID/clave.
-    return AuthResult::DENIED_CREDENTIAL;
+bool AuthManager::validatePassword(int8_t userIndex, const char* password) const {
+    return users_.checkPassword(userIndex, password);
 }
 
 bool AuthManager::registerFailure() {
-    // TODO: failedAttempts_++ y comparar con MAX_AUTH_ATTEMPTS.
-    return false;
+    if (failedAttempts_ < MAX_AUTH_ATTEMPTS) failedAttempts_++;
+    return failedAttempts_ >= MAX_AUTH_ATTEMPTS;
 }
 
 void AuthManager::resetAttempts() { failedAttempts_ = 0; }
-uint8_t AuthManager::getFailedAttempts() const { return failedAttempts_; }
+
+uint8_t AuthManager::failedAttempts() const { return failedAttempts_; }
+
+const UserManager& AuthManager::users() const { return users_; }

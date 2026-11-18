@@ -1,14 +1,19 @@
 /**
  * @file NvmStorage.h
- * @brief Acceso persistente a EEPROM del ATmega2560.
+ * @brief Persistencia en EEPROM del ATmega2560 con version y CRC.
  *
- * EEPROM del Mega: 4 KB. Se usa para usuarios, perfiles, contadores
- * de uso de claves y configuracion [RF-13]. Las escrituras EEPROM
- * tienen desgaste: se espacia su frecuencia y se usa estructura
- * con versionado/CRC.
+ * Imagen almacenada en EEPROM_BASE_ADDR:
  *
- * TODO [PENDIENTE D-07]: confirmar alcance exacto de lo persistido
- * (solo claves? usuarios completos? historial de eventos?).
+ * | Campo   | Tamano | Descripcion                          |
+ * |---------|--------|--------------------------------------|
+ * | magic   | 2 B    | EEPROM_MAGIC (firma de imagen valida) |
+ * | version | 1 B    | EEPROM_LAYOUT_VERSION                 |
+ * | length  | 2 B    | Bytes de datos que siguen             |
+ * | data    | N B    | Carga util (registros de usuario)     |
+ * | crc     | 2 B    | CRC-16/CCITT de version+length+data   |
+ *
+ * La escritura usa EEPROM.update() (solo escribe bytes que cambian)
+ * para reducir el desgaste de la memoria.
  */
 
 #ifndef NVM_STORAGE_H
@@ -18,46 +23,46 @@
 
 /**
  * @class NvmStorage
- * @brief Wrapper sobre EEPROM con interfaz por bloques.
+ * @brief Lectura/escritura de una imagen versionada y protegida con CRC.
+ *
+ * Responsabilidad unica: integridad y acceso a EEPROM. No conoce el
+ * significado de los datos (lo define UserManager).
  */
 class NvmStorage {
 public:
     /**
      * @brief Constructor.
+     * @param baseAddr Direccion EEPROM donde inicia la imagen.
      */
-    NvmStorage();
+    explicit NvmStorage(uint16_t baseAddr);
 
     /**
-     * @brief Verifica si la NVM contiene datos validos (magic+CRC).
-     * @return true si hay datos persistidos validos.
+     * @brief Carga la imagen si magic, version, longitud y CRC son validos.
+     * @param data Buffer destino.
+     * @param len Tamano esperado de la carga util en bytes.
+     * @return true si la imagen es valida y se copio en data.
      */
-    bool isValid() const;
+    bool load(void* data, uint16_t len) const;
 
     /**
-     * @brief Escribe un bloque de bytes en una direccion EEPROM.
-     * @param addr Direccion base en EEPROM.
-     * @param data Puntero a datos.
+     * @brief Escribe la imagen completa (cabecera + datos + CRC).
+     * @param data Carga util a persistir.
+     * @param len Tamano de la carga util en bytes.
+     * @return true si la verificacion posterior a la escritura es correcta.
+     */
+    bool save(const void* data, uint16_t len);
+
+    /**
+     * @brief CRC-16/CCITT (poly 0x1021) incremental.
+     * @param crc Valor previo (0xFFFF para iniciar).
+     * @param data Bytes a procesar.
      * @param len Numero de bytes.
-     * @return true si la escritura se completo.
+     * @return CRC actualizado.
      */
-    bool writeBlock(uint16_t addr, const void* data, uint16_t len);
-
-    /**
-     * @brief Lee un bloque de bytes desde EEPROM.
-     * @param addr Direccion base.
-     * @param data Puntero destino.
-     * @param len Numero de bytes.
-     * @return true si la lectura fue valida (CRC).
-     */
-    bool readBlock(uint16_t addr, void* data, uint16_t len) const;
-
-    /**
-     * @brief Inicializa NVM con valores por defecto si esta vacia.
-     */
-    void begin();
+    static uint16_t crc16(uint16_t crc, const uint8_t* data, uint16_t len);
 
 private:
-    // TODO [PENDIENTE D-07]: mapa de direcciones EEPROM y calculo CRC.
+    uint16_t baseAddr_; ///< Direccion base de la imagen.
 };
 
 #endif /* NVM_STORAGE_H */

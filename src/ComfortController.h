@@ -1,14 +1,16 @@
 /**
  * @file ComfortController.h
- * @brief Evaluacion de confort termico y control de actuadores.
+ * @brief Confort termico por indice PMV (Fanger, ISO 7730) y
+ *        control automatico de ventilacion e iluminacion.
  *
- * Requisito [CONFIRMADO: RF-16/17] "confort apropiado segun numero
- * de personas" con respuesta en tiempo real.
+ * Entradas: temperatura del aire Ta y humedad relativa HR del DHT11.
+ * Parametros estandar de interiores: M = 1.2 met, Icl = 0.5 clo,
+ * v = 0.1 m/s, W = 0 y temperatura radiante media Tr = Ta.
  *
- * TODO [PENDIENTE D-02]: formula/criterio exacto de confort
- * (indices PMV/SET simplificados vs umbrales T°/HR/aforo) pendiente
- * del profesor. Se implementa como funcion configurable.
- * TODO [PENDIENTE D-03]: metodo de conteo de personas.
+ * Ley de control de la ventilacion (histeresis):
+ *  - PMV > +0.5  -> ventilacion ON.
+ *  - PMV <= +0.2 -> ventilacion OFF.
+ *  - En medio se conserva el estado anterior.
  */
 
 #ifndef COMFORT_CONTROLLER_H
@@ -17,19 +19,21 @@
 #include <Arduino.h>
 #include "EnvSensors.h"
 
-/** Accion de confort calculada para los actuadores. */
+/** Resultado de la evaluacion de confort. */
 struct ComfortAction {
-    bool fanOn;    ///< Ventilacion forzada.
-    bool lightOn;  ///< Iluminacion de apoyo.
-    bool alarm;    ///< Condicion termica critica.
+    bool  valid;   ///< true si hay datos validos del DHT11.
+    float pmv;     ///< Predicted Mean Vote (-3 frio .. +3 caluroso).
+    float ppd;     ///< Predicted Percentage Dissatisfied (%).
+    bool  fanOn;   ///< Orden para la ventilacion.
+    bool  lightOn; ///< Orden para la iluminacion.
 };
 
 /**
  * @class ComfortController
- * @brief Decide acciones de confort a partir del snapshot ambiental.
+ * @brief Calcula PMV/PPD y decide las salidas de confort.
  *
- * Modulo de alta cohesion: solo traduce variables -> accion.
- * La ejecucion fisica corresponde a Actuators (bajo acoplamiento).
+ * Alta cohesion: solo traduce variables -> accion. La escritura de
+ * pines corresponde a Actuators.
  */
 class ComfortController {
 public:
@@ -39,25 +43,41 @@ public:
     ComfortController();
 
     /**
-     * @brief Inicializa el controlador.
-     */
-    void begin();
-
-    /**
-     * @brief Evalua el snapshot y retorna la accion de confort.
+     * @brief Evalua un snapshot ambiental y actualiza las ordenes.
      * @param snap Variables ambientales actuales.
-     * @return Accion calculada para los actuadores.
+     * @return Accion calculada (conserva el estado previo si el DHT11 fallo).
      */
     ComfortAction evaluate(const EnvSnapshot& snap);
 
     /**
-     * @brief Actualizacion periodica desde task_comfort.
+     * @brief Ultima accion calculada.
+     * @return Copia de la ultima accion.
      */
-    void update();
+    ComfortAction lastAction() const;
+
+    /**
+     * @brief Indice PMV segun la ecuacion de Fanger (ISO 7730, anexo D).
+     * @param ta Temperatura del aire (C).
+     * @param tr Temperatura radiante media (C).
+     * @param vel Velocidad relativa del aire (m/s).
+     * @param rh Humedad relativa (%).
+     * @param met Tasa metabolica (met).
+     * @param clo Aislamiento de la ropa (clo).
+     * @param wme Trabajo externo (met).
+     * @return Valor PMV.
+     */
+    static float computePmv(float ta, float tr, float vel, float rh,
+                            float met, float clo, float wme);
+
+    /**
+     * @brief Porcentaje de insatisfechos a partir del PMV.
+     * @param pmv Indice PMV.
+     * @return PPD en porcentaje (5..100).
+     */
+    static float computePpd(float pmv);
 
 private:
-    // TODO [PENDIENTE D-02]: funcion de decision de confort termico.
-    // TODO [PENDIENTE D-03]: ponderacion por aforo (peopleCount).
+    ComfortAction action_; ///< Ultima accion (memoria para histeresis).
 };
 
 #endif /* COMFORT_CONTROLLER_H */

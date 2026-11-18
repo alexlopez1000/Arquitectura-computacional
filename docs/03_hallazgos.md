@@ -33,6 +33,8 @@ final (mínimo 4 requeridos por la plantilla).
   datasheet ATmega2560 en el material y la tabla de pines SPI del
   ejemplo RFID cubre explícitamente el Mega). Documentado como
   decisión pendiente D-05.
+- **Actualización:** RESUELTO en H-09 — el docente confirmó Arduino
+  Mega 2560.
 
 ## H-04 — Ausencia de AsyncTaskLib en el material del curso
 
@@ -42,6 +44,8 @@ final (mínimo 4 requeridos por la plantilla).
 - **Solución:** se diseñó `TaskScheduler` cooperativo (millis-based)
   como implementación por defecto, con API compatible para migrar a
   FreeRTOS si el profesor lo exige. Pendiente D-04.
+- **Actualización:** RESUELTO en H-09 — el docente fijó
+  `AsyncTaskLib` + `StateMachineLib`; `TaskScheduler` fue eliminado.
 
 ## H-05 — DHT11 como cuello de botella temporal
 
@@ -59,6 +63,8 @@ final (mínimo 4 requeridos por la plantilla).
 - **Solución:** `EventLog` es buffer circular en RAM; EEPROM reservada
   solo para configuración/usuarios con estructura versionada + CRC
   (pendiente D-07). Candidato a "optimización propuesta".
+- **Actualización:** RESUELTO en H-09 — no se requiere historial;
+  `EventLog` fue eliminado y la EEPROM guarda solo los 3 usuarios.
 
 ## H-07 — Toolchain no disponible en el entorno de desarrollo
 
@@ -112,17 +118,79 @@ final (mínimo 4 requeridos por la plantilla).
   `lib_deps = ... @ file://Average-master.zip` si se prefiere no
   versionar `lib/`.
 
+## H-09 — Cambios tras la validación con el docente y modelo PMV
+
+- **Contexto:** el docente respondió las preguntas D-01…D-08. La
+  arquitectura propuesta (RTC, sensor de fuego, HC-SR04, cerradura,
+  historial y planificador propio) no coincidía con las
+  especificaciones oficiales.
+- **Cambios de hardware** (`include/config.h`, `02_pinout.md`):
+  - MCU confirmado: **Arduino Mega 2560**.
+  - Acceso: MFRC522 (SS=53, MOSI=51, MISO=50, SCK=52, RST=5),
+    keypad 4x4 (30–37), LCD 16x2 en 4 bits (8–13), Hall (40).
+  - Sin cerradura mecánica ni servo: acceso permitido = LED verde (7)
+    + buzzer (48); denegado/bloqueo = LED rojo (6) + buzzer.
+  - Ambiente: DHT11 (22), LDR (A0), sensor analógico de clase (A1);
+    ventilación (44) e iluminación (46).
+  - **Eliminados:** RTC DS3231, sensor de fuego, HC-SR04, pin de
+    cerradura (42).
+- **Cambios de software** (`src/`):
+  - Eliminados `EventLog`, `ScheduleValidator` y `TaskScheduler`.
+  - 7 `AsyncTask` (`AsyncTaskLib`): RFID, teclado, Hall, ambiente +
+    PMV, actuadores, LCD y FSM. `loop()` solo llama `Update()`.
+  - `AccessFSM` sobre `StateMachineLib` con 5 estados
+    (`IDLE → PASSWORD → OPEN`, `ERR`, `ALR`) y 10 transiciones;
+    2FA secuencial: la contraseña solo se pide tras una tarjeta
+    válida y se valida contra el usuario de esa tarjeta.
+  - `UserManager` + `NvmStorage`: exactamente 3 usuarios (UID de 4
+    bytes, perfil Seguridad/Operario/Gerente, clave individual) en
+    una imagen EEPROM con magic `0xAC55`, versión de esquema y
+    CRC-16/CCITT (polinomio `0x1021`). Si la imagen es inválida se
+    restauran y guardan los valores por defecto.
+  - Nuevo módulo `DoorSensor` (Hall con anti-rebote).
+  - Toda temporización de la aplicación usa `uint32_t` y la forma
+    `millis() - inicio >= duracion`, correcta incluso cuando
+    `millis()` desborda (cada ~49,7 días). No hay `delay()`.
+- **Modelo PMV** (`ComfortController`): ecuación de Fanger según
+  ISO 7730 con `Ta` y `HR` del DHT11, `Tr = Ta`, `M = 1.2 met`,
+  `Icl = 0.5 clo`, `v = 0.1 m/s`, `W = 0`:
+  - `pa = HR·10·exp(16.6536 − 4030.183/(Ta + 235))`.
+  - `tcl` se obtiene por iteración de punto fijo con
+    `hc = max(2.38·|tcl − Ta|^0.25, 12.1·√v)`.
+  - `PMV = (0.303·e^(−0.036·M) + 0.028)·(M − W − pérdidas)`, con
+    pérdidas por difusión, sudor, respiración, radiación y
+    convección; `PPD = 100 − 95·e^(−0.03353·PMV⁴ − 0.2179·PMV²)`.
+  - Validación contra el Anexo D de ISO 7730: 22 °C / 60 % →
+    −0.752 (norma −0.75); 27 °C / 60 % → 0.765 (norma 0.77).
+  - Ventilación: ON si `PMV > +0.5`, OFF si `PMV ≤ +0.2`; entre
+    ambos umbrales mantiene el estado (histéresis, evita conmutación
+    rápida del relé).
+- **Incidencia de compilación:** `StateMachineLib` 1.0.0 incluye
+  `"arduino.h"` en minúsculas. En sistemas de archivos sensibles a
+  mayúsculas (Linux/CI) el core AVR solo provee `Arduino.h` y la
+  compilación falla con `fatal error: arduino.h: No such file or
+  directory`.
+  - **Solución:** adaptador `include/arduino.h` que hace
+    `#include_next <Arduino.h>`, y `build_flags = -I include` en
+    `platformio.ini` para que también lo vean las librerías. Funciona
+    igual en Windows (insensible a mayúsculas) sin recursión. No se
+    modifica la librería descargada en `.pio/`.
+- **Nota:** `AsyncTaskLib` mide los periodos internamente con
+  `micros()` y resta sin signo, también segura ante desbordamiento.
+- **Verificación:** `pio run -e megaatmega2560` → SUCCESS, 0 warnings
+  (RAM 11.5 %, Flash 8.4 %); `doxygen Doxyfile` → 0 warnings.
+
 ---
 
 ## Optimizaciones propuestas (borrador para el informe)
 
-1. Migrar el scheduler cooperativo a FreeRTOS si el profesor lo
-   aprueba, ganando preemption real para `task_fsm` y `task_ui`.
+1. Evaluar FreeRTOS en el futuro si se requiere preemption real;
+   hoy se usa `AsyncTaskLib` por decisión del docente.
 2. Usar la FSM tabular en `PROGMEM` (variante del curso) si la RAM
    se vuelve crítica con muchas transiciones.
 3. Filtrado `Average` por canal en sensores para lecturas estables
    en el LCD (librería ya incluida en el curso).
-4. Compresión del registro de usuarios en EEPROM (campos fijos,
-   sin strings dinámicas) para maximizar el historial persistible.
+4. Distribuir escrituras de EEPROM (wear leveling) si se habilita
+   el cambio frecuente de contraseñas.
 5. Watchdog hardware del ATmega para recuperación automática ante
    bloqueos del scheduler cooperativo.

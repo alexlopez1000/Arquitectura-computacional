@@ -1,10 +1,12 @@
 /**
  * @file config.h
- * @brief Configuracion central del sistema: pines, constantes y
- *        parametros pendientes de confirmacion del profesor.
+ * @brief Configuracion central del sistema: pines, tiempos y
+ *        parametros confirmados por el docente.
  *
- * Todos los valores marcados con TODO [PENDIENTE D-0X] corresponden
- * a decisiones abiertas listadas en docs/01_arquitectura_y_requisitos.md.
+ * Hardware oficial [CONFIRMADO]: Arduino Mega 2560. Sin RTC, sin
+ * cerradura mecanica/servo, sin sensor de fuego y sin HC-SR04.
+ * Toda temporizacion usa millis() con resta sin signo (segura ante
+ * el desbordamiento de 32 bits). Ver docs/02_pinout.md.
  */
 
 #ifndef CONFIG_H
@@ -13,13 +15,7 @@
 #include <Arduino.h>
 
 /* ================================================================
- *  MICROCONTROLADOR
- *  TODO [PENDIENTE D-05]: MCU oficial no confirmado.
- *  Los pines siguientes asumen Arduino Mega 2560 (PROPUESTA).
- * ================================================================ */
-
-/* ================================================================
- *  LCD 16x2  [ESTANDAR DE CLASE: ARQC_Clase_10_KEYPAD_LCD.pdf]
+ *  LCD 16x2 (modo 4 bits)
  * ================================================================ */
 #define PIN_LCD_RS   8   ///< Pin RS del LCD 16x2
 #define PIN_LCD_EN   9   ///< Pin EN (enable) del LCD 16x2
@@ -31,94 +27,96 @@
 #define LCD_ROWS     2   ///< Filas del display LCD
 
 /* ================================================================
- *  TECLADO MATRICIAL 4x4
- *  TODO [PENDIENTE D-05]: pinout pendiente de conexion real.
+ *  TECLADO MATRICIAL 4x4 (pines 30-37 = PORTC completo del Mega)
  * ================================================================ */
 #define KEYPAD_NUM_ROWS 4          ///< Numero de filas del teclado matricial
 #define KEYPAD_NUM_COLS 4          ///< Numero de columnas del teclado matricial
 #define PIN_KEYPAD_ROWS {30, 31, 32, 33} ///< Pines de las filas del teclado (salidas)
-#define PIN_KEYPAD_COLS {34, 35, 36, 37} ///< Pines de las columnas del teclado (entradas)
+#define PIN_KEYPAD_COLS {34, 35, 36, 37} ///< Pines de las columnas del teclado (entradas pull-up)
+#define KEY_ENTER   '#'  ///< Tecla que confirma la contrasena
+#define KEY_DELETE  '*'  ///< Tecla que borra el ultimo digito
+#define KEY_CANCEL  'D'  ///< Tecla que cancela la autenticacion en curso
 
 /* ================================================================
- *  RFID MFRC522  [ESTANDAR DE CLASE: rfid-master.zip]
- *  Pines SPI documentados para Arduino Mega en el ejemplo oficial.
+ *  RFID MFRC522 (SPI hardware del Mega: MOSI=51, MISO=50, SCK=52)
  * ================================================================ */
 #define PIN_RFID_SS   53   ///< SDA/SS del RC522
 #define PIN_RFID_RST  5    ///< RST del RC522
-// MOSI=51, MISO=50, SCK=52 (SPI hardware del Mega)
 
 /* ================================================================
- *  SENSOR AMBIENTALES  [PENDIENTE D-05 inventario HW]
+ *  SENSOR DE EFECTO HALL (estado de puerta)
  * ================================================================ */
-#define PIN_DHT       22   ///< DHT11/DHT22 temperatura y humedad [ESTANDAR DE CLASE]
-#define PIN_FIRE      24   ///< Sensor de llama/fuego (tipo y pin pendientes)
-#define PIN_LIGHT     A0   ///< Sensor de iluminacion (LDR/fotodiodo, ADC) [PROPUESTA]
-#define PIN_TRIGGER   28   ///< HC-SR04 TRIG (aforo/puerta) [ESTANDAR DE CLASE]
-#define PIN_ECHO      29   ///< HC-SR04 ECHO
-#define PIN_DOOR      40   ///< Fin de carrera / hall de estado de puerta
+#define PIN_HALL_DOOR 40   ///< Salida digital del sensor Hall (LOW = iman presente = puerta cerrada)
 
 /* ================================================================
- *  ACTUADORES Y ALARMAS
+ *  SENSORES AMBIENTALES
  * ================================================================ */
-#define PIN_LOCK      42   ///< Cerradura: relé/servo/pestillo [PENDIENTE D-05]
-#define PIN_FAN       44   ///< Ventilacion (relé) [ESTANDAR DE CLASE]
-#define PIN_LIGHT_OUT 46   ///< Iluminacion de confort (relé/triac)
-#define PIN_BUZZER    48   ///< Buzzer alarma
-#define PIN_LED_RED   6    ///< LED alarma visual
-#define PIN_LED_GREEN 7    ///< LED estado OK
+#define PIN_DHT       22   ///< DHT11 temperatura y humedad
+#define DHT_TYPE      DHT11 ///< Modelo del sensor DHT
+#define PIN_LDR       A0   ///< Sensor de luz LDR (divisor resistivo, ADC)
+#define PIN_ANALOG_AUX A1  ///< Sensor analogico adicional trabajado en clase (ADC)
+#define ANALOG_AVG_SAMPLES 8 ///< Muestras del promedio movil (libreria Average)
 
 /* ================================================================
- *  RTC  [PENDIENTE D-05: DS3231 propuesto, modulo I2C Wire]
+ *  ACTUADORES Y SENALIZACION
  * ================================================================ */
-// SDA/SCL por bus I2C hardware del Mega (pins 20/21)
+#define PIN_FAN       44   ///< Ventilacion (rele)
+#define PIN_LIGHT_OUT 46   ///< Iluminacion (rele/LED)
+#define PIN_BUZZER    48   ///< Buzzer de acceso/alarma
+#define PIN_LED_RED   6    ///< LED rojo: acceso denegado / bloqueo
+#define PIN_LED_GREEN 7    ///< LED verde: acceso permitido
+#define RELAY_ACTIVE_LEVEL HIGH ///< Nivel logico que activa los reles
 
 /* ================================================================
- *  PARAMETROS DEL SISTEMA
+ *  CONTROL DE ACCESO (2FA: RFID + contrasena)
  * ================================================================ */
+#define NUM_USERS              3        ///< Usuarios registrados (exactamente 3)
+#define MIN_PASSWORD_LENGTH    4        ///< Longitud minima de contrasena
+#define MAX_PASSWORD_LENGTH    8        ///< Longitud maxima de contrasena
+#define MAX_AUTH_ATTEMPTS      3        ///< Intentos fallidos antes de ALR
+#define OPEN_DURATION_MS       5000UL   ///< Tiempo en OPEN (LED verde encendido)
+#define GRANTED_BEEP_MS        1000UL   ///< Duracion del tono de acceso permitido
+#define ERR_DISPLAY_MS         2000UL   ///< Tiempo del mensaje de error en LCD
+#define ERR_BEEP_MS            200UL    ///< Duracion del tono de error
+#define LOCKOUT_DURATION_MS    30000UL  ///< Bloqueo temporal en ALR
+#define ALARM_BEEP_PERIOD_MS   500UL    ///< Periodo del tono intermitente de alarma
+#define PASSWORD_TIMEOUT_MS    15000UL  ///< Tiempo maximo para digitar la contrasena
 
-/** Duracion del desbloqueo de cerradura tras autenticacion valida (ms). */
-#define UNLOCK_DURATION_MS        5000UL
+#define BUZZER_FREQ_OK_HZ      2000U    ///< Frecuencia del tono de acceso permitido
+#define BUZZER_FREQ_ERR_HZ     400U     ///< Frecuencia del tono de error/alarma
 
-/** Duracion del bloqueo temporal tras 3 intentos fallidos o intrusion (ms). */
-#define LOCKOUT_DURATION_MS       30000UL
+/* ================================================================
+ *  EEPROM
+ * ================================================================ */
+#define EEPROM_BASE_ADDR       0        ///< Direccion base de la imagen de usuarios
+#define EEPROM_MAGIC           0xAC55U  ///< Firma de imagen valida
+#define EEPROM_LAYOUT_VERSION  1        ///< Version del esquema de datos persistido
 
-/** Duracion de la alarma sonora/visual (ms). */
-#define ALARM_DURATION_MS         10000UL
+/* ================================================================
+ *  CONFORT TERMICO: PMV (Fanger, ISO 7730)
+ * ================================================================ */
+#define PMV_MET                1.2f     ///< Tasa metabolica (met)
+#define PMV_CLO                0.5f     ///< Aislamiento de la ropa (clo)
+#define PMV_AIR_SPEED          0.1f     ///< Velocidad relativa del aire (m/s)
+#define PMV_EXTERNAL_WORK      0.0f     ///< Trabajo externo (met)
+#define PMV_FAN_ON             0.5f     ///< Umbral PMV para encender ventilacion
+#define PMV_FAN_OFF            0.2f     ///< Umbral PMV para apagar ventilacion (histeresis)
 
-/** Maximo de intentos fallidos antes de alarma + bloqueo [CONFIRMADO]. */
-#define MAX_AUTH_ATTEMPTS         3
+/* ================================================================
+ *  ILUMINACION AUTOMATICA (LDR, ADC 0-1023; mayor = mas luz)
+ * ================================================================ */
+#define LIGHT_ON_BELOW_ADC     300      ///< Enciende iluminacion por debajo de este nivel
+#define LIGHT_OFF_ABOVE_ADC    400      ///< Apaga iluminacion por encima de este nivel
 
-/** Longitud minima de la clave numerica [CONFIRMADO: al menos 4 digitos]. */
-#define MIN_KEY_LENGTH            4
-#define MAX_KEY_LENGTH            8   ///< Longitud maxima de la clave numerica
-
-/** Usos de una clave antes de exigir cambio [CONFIRMADO: 4 usos]. */
-#define KEY_MAX_USES              4
-
-/** Numero maximo de usuarios/credenciales persistidos [PROPUESTA]. */
-#define MAX_USERS                 16
-
-/* TODO [PENDIENTE D-04]: periodo de cada tarea asincrona.
- * Valores iniciales propuestos; ajustar al framework elegido. */
-#define TASK_PERIOD_FSM_MS        20UL    ///< Periodo de la tarea de la FSM (ms)
-#define TASK_PERIOD_KEYPAD_MS     30UL    ///< Periodo del escaneo de teclado (ms)
-#define TASK_PERIOD_RFID_MS       100UL   ///< Periodo de lectura RFID (ms)
-#define TASK_PERIOD_SENSORS_MS    2000UL  ///< Periodo de lectura de sensores ambientales (ms)
-#define TASK_PERIOD_COMFORT_MS    1000UL  ///< Periodo del controlador de confort (ms)
-#define TASK_PERIOD_UI_MS         200UL   ///< Periodo de actualizacion del display (ms)
-#define TASK_PERIOD_STORAGE_MS    5000UL  ///< Periodo de persistencia EEPROM (ms)
-#define TASK_PERIOD_SCHEDULE_MS   1000UL  ///< Periodo de validacion de horario (ms)
-
-/* TODO [PENDIENTE D-03]: metodo de conteo de personas.
- * Si se usa HC-SR04: distancia umbral para contar persona. */
-#define PEOPLE_COUNT_THRESHOLD_CM 150.0f ///< Distancia umbral HC-SR04 para contar persona (cm)
-
-/* TODO [PENDIENTE D-02]: umbrales de confort termico.
- * Propuesta inicial: rangos configurables hasta confirmar formula. */
-#define COMFORT_TEMP_MIN_C        18.0f   ///< Temperatura minima de confort (C)
-#define COMFORT_TEMP_MAX_C        26.0f   ///< Temperatura maxima de confort (C)
-#define COMFORT_HUM_MIN_PCT       40.0f   ///< Humedad minima de confort (%)
-#define COMFORT_HUM_MAX_PCT       60.0f   ///< Humedad maxima de confort (%)
-#define COMFORT_PEOPLE_MAX        8       ///< Aforo maximo de personas
+/* ================================================================
+ *  PERIODOS DE TAREAS (AsyncTaskLib)
+ * ================================================================ */
+#define TASK_PERIOD_FSM_MS        20UL    ///< Evaluacion de transiciones de la FSM (ms)
+#define TASK_PERIOD_KEYPAD_MS     30UL    ///< Escaneo del teclado (ms)
+#define TASK_PERIOD_RFID_MS       100UL   ///< Lectura RFID (ms)
+#define TASK_PERIOD_DOOR_MS       50UL    ///< Lectura del sensor Hall (ms)
+#define TASK_PERIOD_ENV_MS        2000UL  ///< Sensores ambientales + PMV (ms, DHT11 >= 1 s)
+#define TASK_PERIOD_ACTUATORS_MS  50UL    ///< Actualizacion de actuadores (ms)
+#define TASK_PERIOD_LCD_MS        250UL   ///< Refresco del LCD (ms)
 
 #endif /* CONFIG_H */

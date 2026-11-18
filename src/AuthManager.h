@@ -1,14 +1,7 @@
 /**
  * @file AuthManager.h
- * @brief Gestor de autenticacion multicriterio (RFID + teclado).
- *
- * Resuelve la decision D-01 (doble factor vs metodos independientes
- * por perfil) mediante configuracion por perfil: cada perfil define
- * que credenciales acepta.
- *
- * TODO [PENDIENTE D-01]: confirmar con el profesor la regla exacta
- * de combinacion RFID/clave. Mientras tanto, la matriz de decision
- * es configurable en config.h.
+ * @brief Validacion de credenciales 2FA (RFID + contrasena) y
+ *        contador de intentos fallidos.
  */
 
 #ifndef AUTH_MANAGER_H
@@ -16,52 +9,42 @@
 
 #include <Arduino.h>
 #include "config.h"
-
-/** Resultado de un intento de autenticacion. */
-enum class AuthResult : uint8_t {
-    GRANTED = 0,        ///< Acceso autorizado.
-    DENIED_CREDENTIAL,  ///< Credencial incorrecta.
-    DENIED_SCHEDULE,    ///< Fuera de franja horaria [RF-05].
-    DENIED_PROFILE,     ///< Perfil no permite este metodo.
-    LOCKED_OUT          ///< Sistema en bloqueo temporal.
-};
-
-/** Credencial presentada por el usuario (origen RFID o teclado). */
-struct Credential {
-    bool        isRfid;      ///< true si proviene de tarjeta RFID.
-    uint8_t     uid[4];      ///< NUID de 4 bytes si es RFID.
-    char        key[MAX_KEY_LENGTH + 1]; ///< Clave numerica si es teclado.
-};
+#include "UserManager.h"
 
 /**
  * @class AuthManager
- * @brief Autenticacion de usuarios segun perfil y franja horaria.
+ * @brief Aplica las reglas de autenticacion sobre UserManager.
  *
- * Responsabilidad unica: validar credenciales contra UserManager y
- * ScheduleValidator, y reportar el resultado a la FSM.
- * No conoce pines ni protocolo de comunicacion de los lectores.
+ * Factor 1: UID RFID registrado. Factor 2: contrasena individual del
+ * mismo usuario. Cada fallo (tarjeta desconocida o contrasena
+ * incorrecta) cuenta como intento; al llegar a MAX_AUTH_ATTEMPTS la
+ * FSM pasa a ALR.
  */
 class AuthManager {
 public:
     /**
      * @brief Constructor.
+     * @param users Repositorio de usuarios inyectado.
      */
-    AuthManager();
+    explicit AuthManager(UserManager& users);
 
     /**
-     * @brief Inicializa dependencias del gestor.
+     * @brief Factor 1: valida la tarjeta presentada.
+     * @param uid NUID de 4 bytes.
+     * @return Indice del usuario o -1 si la tarjeta no esta registrada.
      */
-    void begin();
+    int8_t validateCard(const uint8_t uid[4]) const;
 
     /**
-     * @brief Valida una credencial presentada.
-     * @param cred Credencial a validar.
-     * @return Resultado de la autenticacion.
+     * @brief Factor 2: valida la contrasena del usuario ya identificado.
+     * @param userIndex Usuario identificado por la tarjeta.
+     * @param password Contrasena digitada.
+     * @return true si es correcta.
      */
-    AuthResult authenticate(const Credential& cred);
+    bool validatePassword(int8_t userIndex, const char* password) const;
 
     /**
-     * @brief Registra un intento fallido y evalua bloqueo.
+     * @brief Registra un intento fallido.
      * @return true si se alcanzo MAX_AUTH_ATTEMPTS.
      */
     bool registerFailure();
@@ -72,16 +55,20 @@ public:
     void resetAttempts();
 
     /**
-     * @brief Intentos fallidos consecutivos actuales.
-     * @return Contador de intentos.
+     * @brief Intentos fallidos consecutivos.
+     * @return Contador actual.
      */
-    uint8_t getFailedAttempts() const;
+    uint8_t failedAttempts() const;
+
+    /**
+     * @brief Acceso de solo lectura al repositorio de usuarios.
+     * @return Referencia a UserManager.
+     */
+    const UserManager& users() const;
 
 private:
-    uint8_t failedAttempts_; ///< Contador de fallos consecutivos.
-    // TODO [PENDIENTE D-01]: punteros a UserManager y
-    // ScheduleValidator se inyectaran en begin()/setup segun
-    // la combinacion RFID/clave confirmada.
+    UserManager& users_;       ///< Repositorio de usuarios.
+    uint8_t failedAttempts_;   ///< Fallos consecutivos.
 };
 
 #endif /* AUTH_MANAGER_H */

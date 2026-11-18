@@ -1,14 +1,12 @@
 /**
  * @file Actuators.h
- * @brief Accionamiento de cerradura, ventilacion, iluminacion,
- *        LEDs y buzzer.
+ * @brief Salidas fisicas: LED verde/rojo, buzzer, ventilacion e
+ *        iluminacion.
  *
- * Cubre los actuadores del enunciado: cerradura con desbloqueo
- * temporal [RF-03], ventilacion/iluminacion de confort [RF-17],
- * alarmas visuales y sonoras [RF-04, RF-21] y pestillo [RF-10].
- *
- * TODO [PENDIENTE D-05]: tipo real de cerradura (solenoide, relé,
- * servo o combinacion pestillo) — la interfaz se mantiene neutra.
+ * No hay cerradura mecanica ni servo [CONFIRMADO]: el acceso
+ * permitido se senaliza con LED verde + buzzer y el bloqueo con LED
+ * rojo + buzzer intermitente. Los patrones temporales del buzzer se
+ * generan sin bloquear, con millis(), desde la tarea de actuadores.
  */
 
 #ifndef ACTUATORS_H
@@ -16,52 +14,38 @@
 
 #include <Arduino.h>
 
-/** Tipo de actuador de cerradura [PENDIENTE D-05]. */
-enum class LockType : uint8_t {
-    SOLENOID = 0,  ///< Solenoide electrico.
-    SERVO,         ///< Servomotor de accion.
-    RELAY_COMBO    ///< Relé + pestillo combinados [RF-10].
+/** Senal de acceso activa. */
+enum class AccessSignal : uint8_t {
+    NONE = 0, ///< LEDs y buzzer apagados.
+    GRANTED,  ///< LED verde fijo + tono de confirmacion.
+    DENIED,   ///< Tono corto de error.
+    ALARM     ///< LED rojo fijo + tono intermitente.
 };
 
 /**
  * @class Actuators
- * @brief Escribe los estados fisicos de todos los actuadores.
+ * @brief Traduce ordenes logicas a senales electricas.
  *
- * Responsabilidad unica: translation estado logico -> senal
- * electrica. No decide CUANDO actuar; recibe ordenes de la FSM y
- * del ComfortController.
+ * No decide cuando actuar: recibe ordenes de AccessFSM (senal de
+ * acceso) y de ComfortController (ventilacion/iluminacion).
  */
 class Actuators {
 public:
     /**
      * @brief Constructor.
-     * @param lockType Tipo de cerradura instalada.
      */
-    explicit Actuators(LockType lockType = LockType::SOLENOID);
+    Actuators();
 
     /**
-     * @brief Configura pines de salida y estado seguro inicial.
+     * @brief Configura pines de salida en estado seguro (todo apagado).
      */
     void begin();
 
-    /* ---- Cerradura ---- */
-
     /**
-     * @brief Desbloquea la cerradura.
+     * @brief Activa una senal de acceso (reinicia su temporizacion).
+     * @param signal Senal a mostrar.
      */
-    void unlock();
-
-    /**
-     * @brief Bloquea la cerradura (reposo).
-     */
-    void lock();
-
-    /**
-     * @brief Acciona el pestillo si el mecanismo lo incluye [RF-10].
-     */
-    void toggleBolt();
-
-    /* ---- Confort ---- */
+    void setAccessSignal(AccessSignal signal);
 
     /**
      * @brief Enciende/apaga la ventilacion.
@@ -70,39 +54,42 @@ public:
     void setFan(bool on);
 
     /**
-     * @brief Enciende/apaga la iluminacion de confort.
+     * @brief Enciende/apaga la iluminacion.
      * @param on Estado deseado.
      */
     void setLight(bool on);
 
-    /* ---- Alarmas ---- */
+    /**
+     * @brief Estado actual de la ventilacion.
+     * @return true si esta encendida.
+     */
+    bool fanOn() const;
 
     /**
-     * @brief Enciende/apaga el buzzer de alarma.
-     * @param on Estado deseado.
+     * @brief Estado actual de la iluminacion.
+     * @return true si esta encendida.
      */
-    void setBuzzer(bool on);
+    bool lightOn() const;
 
     /**
-     * @brief Enciende/apaga el LED rojo de alarma.
-     * @param on Estado deseado.
+     * @brief Genera los patrones temporales del buzzer.
+     *        Llamar periodicamente desde la tarea de actuadores.
      */
-    void setAlarmLed(bool on);
-
-    /**
-     * @brief Enciende/apaga el LED verde de estado OK.
-     * @param on Estado deseado.
-     */
-    void setOkLed(bool on);
-
-    /**
-     * @brief Apaga todos los actuadores (estado seguro).
-     */
-    void allOff();
+    void update();
 
 private:
-    LockType lockType_; ///< Tipo de cerradura configurado.
-    // TODO [PENDIENTE D-05]: driver Servo/relé segun lockType.
+    /**
+     * @brief Enciende o apaga el buzzer evitando llamadas redundantes.
+     * @param on Estado deseado.
+     * @param freqHz Frecuencia del tono.
+     */
+    void buzzer(bool on, unsigned int freqHz);
+
+    AccessSignal signal_;     ///< Senal de acceso activa.
+    uint32_t signalStartMs_;  ///< Inicio de la senal (millis()).
+    bool fanOn_;              ///< Estado de la ventilacion.
+    bool lightOn_;            ///< Estado de la iluminacion.
+    bool buzzerOn_;           ///< Estado del buzzer.
 };
 
 #endif /* ACTUATORS_H */

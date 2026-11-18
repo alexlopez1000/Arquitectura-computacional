@@ -1,37 +1,35 @@
 /**
  * @file EnvSensors.h
- * @brief Adquisicion de variables ambientales y aforo.
+ * @brief Adquisicion de variables ambientales: DHT11 (temperatura y
+ *        humedad), LDR (A0) y sensor analogico adicional (A1).
  *
- * Requisitos [CONFIRMADO: RF-15..17]: temperatura, humedad, fuego,
- * iluminacion y conteo de personas para el calculo de confort.
- *
- * Librerias del curso: DHT (DHT11) [Lab_DIG_TTM_02], HC-SR04 para
- * distancia/aforo, sensor de llama y LDR pendientes de confirmar.
+ * Las lecturas analogicas se suavizan con promedio movil (libreria
+ * Average del curso). El DHT11 se lee como maximo cada 2 s.
  */
 
 #ifndef ENV_SENSORS_H
 #define ENV_SENSORS_H
 
 #include <Arduino.h>
+#include <DHT.h>
+#include <Average.h>
 #include "config.h"
 
-/** Instantanea de variables ambientales para consumo por tareas. */
+/** Instantanea de variables ambientales. */
 struct EnvSnapshot {
-    float temperatureC;   ///< Temperatura en grados Celsius.
-    float humidityPct;    ///< Humedad relativa porcentaje.
-    bool  fireDetected;   ///< Lectura digital de fuego.
-    uint16_t lightLevel;  ///< Nivel de iluminacion (0-1023 ADC).
-    uint8_t peopleCount;  ///< Personas estimadas en el area.
-    unsigned long timestampMs; ///< Marca de adquisicion.
+    float    temperatureC; ///< Temperatura del aire (C).
+    float    humidityPct;  ///< Humedad relativa (%).
+    bool     dhtValid;     ///< true si la ultima lectura DHT11 fue valida.
+    uint16_t lightLevel;   ///< Nivel de luz LDR promediado (ADC 0-1023).
+    uint16_t auxLevel;     ///< Sensor analogico adicional promediado (ADC 0-1023).
+    uint32_t timestampMs;  ///< Instante de adquisicion (millis()).
 };
 
 /**
  * @class EnvSensors
- * @brief Lee y promedia los sensores ambientales.
+ * @brief Muestrea y filtra los sensores ambientales.
  *
- * Responsabilidad unica: muestreo periodico y filtrado (libreria
- * Average del curso) de sensores. Publica snapshots inmutables que
- * consumen ComfortController y DisplayUI (bajo acoplamiento).
+ * Publica snapshots que consumen ComfortController y DisplayUI.
  */
 class EnvSensors {
 public:
@@ -41,26 +39,26 @@ public:
     EnvSensors();
 
     /**
-     * @brief Configura pines y librerias de sensores.
+     * @brief Inicializa el DHT11 y las entradas analogicas.
      */
     void begin();
 
     /**
-     * @brief Ciclo de muestreo. Llamar desde task_sensors_env.
-     *        El DHT11 es lento (~2 s): la lectura se espacia.
+     * @brief Ciclo de muestreo. Llamar desde la tarea ambiental.
      */
     void update();
 
     /**
-     * @brief Snapshot mas reciente de variables ambientales.
-     * @return Copia del ultimo snapshot valido.
+     * @brief Snapshot mas reciente.
+     * @return Copia del ultimo snapshot.
      */
     EnvSnapshot snapshot() const;
 
 private:
-    EnvSnapshot current_; ///< Ultimo snapshot publicado.
-    // TODO [PENDIENTE D-02/D-03/D-05]: objetos DHT, HC-SR04,
-    // filtro Average por canal y algoritmo de conteo de personas.
+    DHT dht_;                     ///< Driver DHT11.
+    Average<uint16_t> lightAvg_;  ///< Promedio movil del LDR.
+    Average<uint16_t> auxAvg_;    ///< Promedio movil del sensor adicional.
+    EnvSnapshot current_;         ///< Ultimo snapshot publicado.
 };
 
 #endif /* ENV_SENSORS_H */

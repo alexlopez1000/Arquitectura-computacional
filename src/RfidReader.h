@@ -1,9 +1,8 @@
 /**
  * @file RfidReader.h
- * @brief Lectura no bloqueante de tarjetas RFID (MFRC522).
+ * @brief Lectura de tarjetas RFID con el modulo MFRC522 (SPI).
  *
- * [ESTANDAR DE CLASE] Libreria MFRC522 (miguelbalboa/rfid) con SPI
- * hardware del Mega: SS=53, MOSI=51, MISO=50, SCK=52, RST=5
+ * SPI hardware del Mega: SS=53, MOSI=51, MISO=50, SCK=52, RST=5
  * (tabla de pines del ejemplo oficial ReadNUID.ino).
  */
 
@@ -11,6 +10,7 @@
 #define RFID_READER_H
 
 #include <Arduino.h>
+#include <MFRC522.h>
 #include "config.h"
 
 /** NUID de una tarjeta RFID MIFARE. */
@@ -20,43 +20,40 @@ struct RfidUid {
 
 /**
  * @class RfidReader
- * @brief Interfaz con el modulo MFRC522.
+ * @brief Detecta tarjetas nuevas y entrega su NUID.
  *
- * Responsabilidad unica: detectar tarjetas y entregar el NUID.
- * La validacion del UID contra usuarios autorizados corresponde a
- * AuthManager/UserManager (bajo acoplamiento).
+ * La validacion del UID corresponde a AuthManager (bajo acoplamiento).
  */
 class RfidReader {
 public:
     /**
      * @brief Constructor.
+     * @param ssPin Pin SS (SDA) del RC522.
+     * @param rstPin Pin RST del RC522.
      */
-    RfidReader();
+    RfidReader(uint8_t ssPin, uint8_t rstPin);
 
     /**
-     * @brief Inicializa SPI y el PCD (lector RC522).
+     * @brief Inicializa el bus SPI y el lector RC522.
      */
     void begin();
 
     /**
-     * @brief Verifica si hay una tarjeta nueva presente.
-     *        Operacion potencialmente lenta: se invoca por tandas
-     *        desde task_input_rfid.
-     * @return true si se detecto una tarjeta nueva.
+     * @brief Comprueba si hay una tarjeta nueva y lee su NUID.
+     *        Llamar desde la tarea RFID.
+     * @return true si se leyo una tarjeta nueva.
      */
     bool poll();
 
     /**
      * @brief NUID de la ultima tarjeta leida.
-     * @return Estructura con los 4 bytes del UID.
+     * @return Copia del UID.
      */
     RfidUid lastUid() const;
 
 private:
-    RfidUid lastUid_;          ///< Cache del ultimo UID leido.
-    bool    cardPending_;      ///< Tarjeta detectada pendiente de lectura.
-    // TODO [PENDIENTE D-01/D-05]: instancia MFRC522 rfid(SS,RST)
-    // y verificacion de tipo PICC segun ejemplos del curso.
+    MFRC522 mfrc522_; ///< Driver del lector.
+    RfidUid lastUid_; ///< Ultimo UID leido.
 };
 
 #endif /* RFID_READER_H */

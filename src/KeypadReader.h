@@ -2,26 +2,26 @@
  * @file KeypadReader.h
  * @brief Lectura no bloqueante del teclado matricial 4x4.
  *
- * [ESTANDAR DE CLASE] La clase 10 del curso describe el escaneo por
- * bitmask de puerto (filas como salidas, columnas como entradas).
- * La implementacion definitiva seguira ese patron.
+ * Escaneo por filas (salidas) y columnas (entradas con pull-up),
+ * patron de la clase 10. Una tecla se publica una sola vez cuando se
+ * observa estable en dos escaneos consecutivos (anti-rebote).
  */
 
 #ifndef KEYPAD_READER_H
 #define KEYPAD_READER_H
 
 #include <Arduino.h>
+#include "config.h"
 
 /** Tecla presionada; 0 = ninguna. */
 using KeyCode = char;
 
 /**
  * @class KeypadReader
- * @brief Escanea el teclado matricial y publica teclas con
- *        anti-rebote por tiempo.
+ * @brief Escanea el teclado y entrega eventos de tecla.
  *
- * Responsabilidad unica: entrada de teclado. No interpreta la clave
- * ni decide transiciones; entrega eventos a AuthManager/FSM.
+ * Responsabilidad unica: entrada de teclado. No interpreta la
+ * contrasena; la FSM consume las teclas.
  */
 class KeypadReader {
 public:
@@ -31,27 +31,32 @@ public:
     KeypadReader();
 
     /**
-     * @brief Configura pines del teclado segun config.h.
+     * @brief Configura filas como salidas (HIGH) y columnas con pull-up.
      */
     void begin();
 
     /**
-     * @brief Debounce/update periodico del escaneo.
-     *        Llamar desde task_input_keypad.
+     * @brief Escanea la matriz y aplica anti-rebote.
+     *        Llamar desde la tarea del teclado.
      */
     void update();
 
     /**
-     * @brief Ultima tecla detectada (consumo por evento).
+     * @brief Consume la ultima tecla detectada.
      * @return Tecla presionada o 0 si no hay evento nuevo.
      */
     KeyCode readKey();
 
 private:
-    KeyCode  lastKey_;         ///< Ultima tecla leida.
-    unsigned long lastScanMs_; ///< Marca del ultimo escaneo.
-    // TODO [PENDIENTE D-05]: mapear mapa de teclas real del teclado
-    // (filas/columnas -> caracteres) segun pinout confirmado.
+    /**
+     * @brief Recorre la matriz una vez.
+     * @return Tecla presionada en este instante o 0.
+     */
+    KeyCode scan() const;
+
+    KeyCode pendingKey_;  ///< Tecla pendiente de consumo.
+    KeyCode lastScan_;    ///< Resultado del escaneo anterior.
+    KeyCode stableKey_;   ///< Tecla estable actualmente presionada.
 };
 
 #endif /* KEYPAD_READER_H */

@@ -1,12 +1,7 @@
 /**
  * @file UserManager.h
- * @brief Gestion de usuarios, perfiles, claves y persistencia.
- *
- * Requisitos cubiertos [CONFIRMADO: ARQ_Proyecto.pdf]:
- *  - Perfiles: Seguridad, Operarios, Coordinadores, Gerentes [RF-11]
- *  - Claves de >=4 digitos, cambio tras 4 usos, sin repeticion [RF-12]
- *  - Alta de usuarios y copia de credenciales [RF-08, RF-09]
- *  - Persistencia en EEPROM via NvmStorage [RF-13]
+ * @brief Repositorio de los 3 usuarios del sistema (UID RFID,
+ *        perfil y contrasena individual) persistidos en EEPROM.
  */
 
 #ifndef USER_MANAGER_H
@@ -14,111 +9,90 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "NvmStorage.h"
 
-/** Roles de la empresa [CONFIRMADO: enunciado]. */
+/** Perfiles de la empresa; cada uno de los 3 usuarios tiene uno distinto. */
 enum class Profile : uint8_t {
     SECURITY    = 0, ///< Seguridad.
-    OPERATORS   = 1, ///< Operarios.
-    COORDINATORS= 2, ///< Coordinadores.
-    MANAGERS    = 3  ///< Gerentes.
+    OPERATOR    = 1, ///< Operario.
+    COORDINATOR = 2, ///< Coordinador.
+    MANAGER     = 3  ///< Gerente.
 };
 
-/** Registro de un usuario del sistema. */
+/** Registro persistido de un usuario (tamano fijo, sin memoria dinamica). */
 struct UserRecord {
-    bool     active;                 ///< Usuario habilitado.
-    Profile  profile;                ///< Rol asignado.
-    uint8_t  rfidUid[4];             ///< Credencial RFID (si aplica).
-    char     key[MAX_KEY_LENGTH+1];  ///< Clave numerica vigente.
-    uint8_t  keyUses;                ///< Usos acumulados de la clave.
-    char     prevKey[MAX_KEY_LENGTH+1]; ///< Ultima clave (anti-repeticion).
+    uint8_t rfidUid[4];                      ///< NUID de la tarjeta RFID.
+    Profile profile;                         ///< Perfil asignado.
+    char    password[MAX_PASSWORD_LENGTH + 1]; ///< Contrasena numerica (terminada en '\\0').
 };
 
 /**
  * @class UserManager
- * @brief Repositorio de usuarios con reglas de claves.
+ * @brief Busqueda de usuarios por UID y verificacion de contrasena.
  *
- * Responsabilidad unica: alta/baja/consulta de usuarios y validacion
- * de reglas de claves (4 usos, no repeticion). La lectura/escritura
- * EEPROM se delega a NvmStorage.
+ * Al arrancar carga la imagen de EEPROM; si no es valida (primer
+ * arranque, cambio de version o CRC incorrecto) escribe los usuarios
+ * por defecto. La lectura/escritura fisica se delega a NvmStorage.
  */
 class UserManager {
 public:
     /**
      * @brief Constructor.
+     * @param storage Almacenamiento EEPROM inyectado.
      */
-    UserManager();
+    explicit UserManager(NvmStorage& storage);
 
     /**
-     * @brief Carga usuarios persistidos desde NVM.
+     * @brief Carga los usuarios desde EEPROM o restaura los de fabrica.
+     * @return true si se cargo una imagen valida; false si se restauraron valores por defecto.
      */
-    void begin();
+    bool begin();
 
     /**
-     * @brief Registra un nuevo usuario [RF-08].
-     * @param user Datos del usuario.
-     * @return true si se creo correctamente.
-     */
-    bool addUser(const UserRecord& user);
-
-    /**
-     * @brief Busca usuario por credencial RFID.
+     * @brief Busca un usuario por UID RFID.
      * @param uid NUID de 4 bytes.
-     * @return Indice del usuario o -1 si no existe.
+     * @return Indice del usuario (0..NUM_USERS-1) o -1 si no existe.
      */
-    int findByRfid(const uint8_t uid[4]) const;
+    int8_t findByUid(const uint8_t uid[4]) const;
 
     /**
-     * @brief Busca usuario por clave numerica.
-     * @param key Cadena de digitos.
-     * @return Indice del usuario o -1 si no existe.
-     */
-    int findByKey(const char* key) const;
-
-    /**
-     * @brief Copia credencial de un usuario a otro [RF-09].
-     * @param src Indice origen.
-     * @param dst Indice destino.
-     * @return true si la copia fue valida.
-     */
-    bool cloneCredential(int src, int dst);
-
-    /**
-     * @brief Registra uso exitoso de la clave de un usuario.
-     *        Si alcanza KEY_MAX_USES marca rotacion pendiente [RF-12].
+     * @brief Compara la contrasena del usuario indicado.
      * @param index Indice del usuario.
-     * @return true si requiere cambio de clave.
+     * @param password Cadena digitada.
+     * @return true si coincide.
      */
-    bool registerKeyUse(int index);
+    bool checkPassword(int8_t index, const char* password) const;
 
     /**
-     * @brief Cambia la clave de un usuario validando no-repeticion.
+     * @brief Cambia la contrasena de un usuario y persiste la imagen.
      * @param index Indice del usuario.
-     * @param newKey Nueva clave (>= MIN_KEY_LENGTH digitos).
-     * @return true si el cambio fue aceptado.
+     * @param newPassword Nueva contrasena (MIN..MAX_PASSWORD_LENGTH digitos).
+     * @return true si la contrasena es valida y se guardo.
      */
-    bool changeKey(int index, const char* newKey);
+    bool setPassword(int8_t index, const char* newPassword);
 
     /**
-     * @brief Persiste el estado actual en NVM.
+     * @brief Perfil de un usuario.
+     * @param index Indice del usuario.
+     * @return Perfil asignado.
      */
-    void save();
+    Profile profileOf(int8_t index) const;
 
     /**
-     * @brief Acceso de solo lectura al arreglo de usuarios.
-     * @return Puntero al arreglo y cantidad via count().
+     * @brief Nombre corto del perfil para el LCD.
+     * @param profile Perfil.
+     * @return Cadena constante (max. 11 caracteres).
      */
-    const UserRecord* records() const;
+    static const char* profileName(Profile profile);
 
     /**
-     * @brief Numero de usuarios registrados.
-     * @return Cantidad de registros.
+     * @brief Restaura y persiste los usuarios por defecto.
      */
-    uint8_t count() const;
+    void restoreDefaults();
 
 private:
-    UserRecord users_[MAX_USERS]; ///< Almacen de usuarios en RAM.
-    uint8_t    userCount_;        ///< Registros ocupados.
-    // TODO [PENDIENTE D-07]: esquema EEPROM exacto y CRC.
+    NvmStorage& storage_;            ///< Acceso a EEPROM.
+    UserRecord  users_[NUM_USERS];   ///< Copia en RAM de los usuarios.
 };
 
 #endif /* USER_MANAGER_H */

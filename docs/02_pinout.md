@@ -1,100 +1,80 @@
 # 02 — Pinout del Sistema
 ## Arduino Mega 2560 (ATmega2560)
 
-- **Estado:** PROPUESTA pendiente de confirmación del profesor (D-05).
-- **Convención:** `[ESTÁNDAR DE CLASE]` = pin documentado en material del curso · `[PROPUESTA]` = asignación propuesta, sin colisiones de hardware.
-- **Fuente de pines:** datasheet ATmega2560 (`atmel-2549-...datasheet.pdf`) + ejemplos del curso.
+- **Estado:** `[CONFIRMADO]` por el docente (ver `03_hallazgos.md`, H-09). Fuente única en código: `include/config.h`.
+- **Excluido del hardware:** RTC DS3231, sensor de fuego, HC-SR04, cerradura mecánica/solenoide y servo.
+- **Fuente de pines:** datasheet ATmega2560 + ejemplos del curso (`rfid-master.zip`, `ARQC_Clase_10_KEYPAD_LCD.pdf`).
 
 ---
 
-## 1. Mapa de pines propuesto
+## 1. Mapa de pines
 
-### 1.1 Comunicación y buses reservados
+### 1.1 Buses
 
-| Función | Pines Mega | Uso | Estado |
-|---------|-----------|-----|--------|
-| UART0 TX/RX | 0 (RX0), 1 (TX0) | **RESERVADOS** — bootloader/programación USB-serial | `[CONFIRMADO]` no usar |
-| UART1 TX/RX | 18 (TX1), 19 (RX1) | Libre / depuración serial secundaria | `[PROPUESTA]` |
-| UART2 TX/RX | 16 (TX2), 17 (RX2) | Libre | `[PROPUESTA]` |
-| UART3 TX/RX | 14 (TX3), 15 (RX3) | Libre | `[PROPUESTA]` |
-| I2C SDA/SCL | 20 (SDA), 21 (SCL) | RTC DS3231 | `[PROPUESTA - PENDIENTE D-05]` |
-| SPI SS | 53 | MFRC522 SDA/SS | `[ESTÁNDAR DE CLASE]` |
-| SPI MOSI | 51 | MFRC522 MOSI | `[ESTÁNDAR DE CLASE]` |
-| SPI MISO | 50 | MFRC522 MISO | `[ESTÁNDAR DE CLASE]` |
-| SPI SCK | 52 | MFRC522 SCK | `[ESTÁNDAR DE CLASE]` |
-| PWM extras | 2–13, 44–46 | disponibles (Timer0/1/3/4/5 según pin) | `[PROPUESTA]` |
+| Función | Pines Mega | Uso |
+|---------|-----------|-----|
+| UART0 RX/TX | 0, 1 | **Reservados** — programación USB y monitor serial (9600 baud) |
+| SPI SS | 53 | MFRC522 SDA/SS |
+| SPI MOSI | 51 | MFRC522 MOSI |
+| SPI MISO | 50 | MFRC522 MISO |
+| SPI SCK | 52 | MFRC522 SCK |
+| I2C SDA/SCL | 20, 21 | **Libres** (sin RTC) |
 
-### 1.2 LCD 16x2 (modo 4 bits) `[ESTÁNDAR DE CLASE: ARQC_Clase_10_KEYPAD_LCD.pdf]`
+### 1.2 Control de acceso
 
-| Señal LCD | Pin Mega | Tipo |
-|-----------|----------|------|
-| RS | 8 | Digital out |
-| EN | 9 | Digital out |
-| D4 | 10 | Digital out |
-| D5 | 11 | Digital out |
-| D6 | 12 | Digital out |
-| D7 | 13 | Digital out |
-| RW | GND | atado a tierra (solo escritura) |
+| Dispositivo | Señal | Pin Mega | Macro `config.h` | Tipo |
+|-------------|-------|----------|------------------|------|
+| RFID MFRC522 | SDA (SS) | 53 | `PIN_RFID_SS` | SPI |
+| RFID MFRC522 | RST | 5 | `PIN_RFID_RST` | Digital out |
+| RFID MFRC522 | MOSI / MISO / SCK | 51 / 50 / 52 | (bus SPI hardware) | SPI |
+| RFID MFRC522 | 3.3V / GND | 3.3V / GND | — | Alimentación (IRQ sin conectar) |
+| Keypad 4x4 | Filas R1–R4 | 30, 31, 32, 33 | `PIN_KEYPAD_ROWS` | Digital out (escaneo) |
+| Keypad 4x4 | Columnas C1–C4 | 34, 35, 36, 37 | `PIN_KEYPAD_COLS` | Digital in, pull-up interno |
+| LCD 16x2 (4 bits) | RS | 8 | `PIN_LCD_RS` | Digital out |
+| LCD 16x2 (4 bits) | EN | 9 | `PIN_LCD_EN` | Digital out |
+| LCD 16x2 (4 bits) | D4–D7 | 10, 11, 12, 13 | `PIN_LCD_D4`…`PIN_LCD_D7` | Digital out |
+| LCD 16x2 | RW | GND | — | Solo escritura |
+| Sensor Hall (puerta) | DO | 40 | `PIN_HALL_DOOR` | Digital in, pull-up; LOW = imán presente = puerta cerrada |
 
-> Pines 8–13 soportan PWM (Timer4/Timer5) si se requiere dimming futuro.
+Mapa del teclado: `1 2 3 A / 4 5 6 B / 7 8 9 C / * 0 # D` — `#` confirma, `*` borra, `D` cancela.
 
-### 1.3 Teclado matricial 4x4 `[PROPUESTA - PENDIENTE CONFIRMACIÓN]`
+### 1.3 Señalización de acceso (sin cerradura mecánica ni servo)
 
-| Señal | Pines Mega | Tipo |
-|-------|-----------|------|
-| Filas R1–R4 | 30, 31, 32, 33 | Digital out (escaneo por bitmask, patrón clase 10) |
-| Columnas C1–C4 | 34, 35, 36, 37 | Digital in con pull-up |
+| Actuador | Pin Mega | Macro | Uso |
+|----------|----------|-------|-----|
+| LED verde | 7 | `PIN_LED_GREEN` | Acceso permitido (`OPEN`) |
+| LED rojo | 6 | `PIN_LED_RED` | Acceso denegado (`ERR`) y bloqueo (`ALR`) |
+| Buzzer | 48 | `PIN_BUZZER` | `tone()`: 2 kHz acceso, 400 Hz error/alarma |
 
-### 1.4 RFID MFRC522 `[ESTÁNDAR DE CLASE: rfid-master.zip — tabla oficial para Mega]`
+### 1.4 Sensores ambientales
 
-| Señal RC522 | Pin Mega | Tipo |
-|-------------|----------|------|
-| SDA (SS) | 53 | SPI |
-| MOSI | 51 | SPI |
-| MISO | 50 | SPI |
-| SCK | 52 | SPI |
-| RST | 5 | Digital out |
-| 3.3V / GND | 3.3V / GND | Alimentación (ver §2) |
-| IRQ | — | No conectado |
+| Sensor | Señal | Pin Mega | Macro | Tipo |
+|--------|-------|----------|-------|------|
+| DHT11 | DATA | 22 | `PIN_DHT` | Digital 1-wire (`DHT.h`), lectura cada 2 s |
+| LDR | AO | **A0** | `PIN_LDR` | ADC 10 bits (divisor resistivo), promedio móvil |
+| Sensor analógico adicional (clase) | AO | **A1** | `PIN_ANALOG_AUX` | ADC 10 bits, promedio móvil |
 
-### 1.5 Sensores ambientales `[PROPUESTA - PENDIENTE CONFIRMACIÓN]`
+### 1.5 Actuadores ambientales
 
-| Sensor | Señal | Pin Mega | Tipo |
-|--------|-------|----------|------|
-| DHT11/DHT22 | DATA | 22 | Digital 1-wire (librería `DHT.h`) `[ESTÁNDAR DE CLASE]` |
-| DHT | VCC/GND | 5V / GND | Alimentación |
-| Fuego/flama | DO | 24 | Digital in (sensor tipo KY-026 / LM393) |
-| Luz (LDR) | AO | **A0** | ADC 10-bit (divisor resistivo) |
-| HC-SR04 | TRIG | 28 | Digital out (pulso 10 µs) |
-| HC-SR04 | ECHO | 29 | Digital in (`pulseIn`) `[ESTÁNDAR DE CLASE]` |
-| Estado de puerta | DO | 40 | Digital in (hall/fin de carrera) |
+| Actuador | Pin Mega | Macro | Control |
+|----------|----------|-------|---------|
+| Ventilación (relé) | 44 | `PIN_FAN` | PMV > +0.5 → ON; PMV ≤ +0.2 → OFF |
+| Iluminación (relé/LED) | 46 | `PIN_LIGHT_OUT` | LDR < 300 → ON; LDR > 400 → OFF |
 
-> D-03 pendiente: el HC-SR04 se propone para conteo de aforo y/o supervisión de puerta; confirmar con el profesor.
-
-### 1.6 Actuadores y alarmas `[PROPUESTA - PENDIENTE CONFIRMACIÓN]`
-
-| Actuador | Pin Mega | Tipo | Notas |
-|----------|----------|------|-------|
-| Cerradura (solenoide/relé) | 42 | Digital out | D-05: tipo pendiente (solenoide/servo/relé+pestillo) |
-| Ventilación (relé) | 44 | Digital out / PWM | Relé módulo optoacoplado `[ESTÁNDAR DE CLASE: Lab_DIG_TTM_02]` |
-| Iluminación confort (relé) | 46 | Digital out | Relé o triac según carga |
-| Buzzer | 48 | Digital out (PWM) | Tonos por `tone()`/PWM |
-| LED rojo (alarma) | 6 | Digital out + resistencia | |
-| LED verde (OK) | 7 | Digital out + resistencia | |
+Nivel activo de relés: `RELAY_ACTIVE_LEVEL` (por defecto `HIGH`; cambiar a `LOW` si el módulo de relé es activo en bajo).
 
 ---
 
-## 2. Consideraciones eléctricas (criterio Implementación Hardware 8%)
+## 2. Consideraciones eléctricas
 
-1. **Alimentación de actuadores:** el Mega alimenta lógica (5 V / 3.3 V), pero **NO** las bobinas de relés, solenoides ni motores. Usar fuente externa 5–12 V dedicada según la carga.
-2. **Relés:** usar módulos **optoacoplados** con bornes NO/COM para aislar la etapa de potencia; el pin `IN` del módulo se excita desde el pin digital del Mega.
-3. **Tierra común (GND):** la tierra de la fuente externa de actuadores, la del Mega y la de los sensores debe ser **común** para referencia de señal; nunca compartir la línea de alimentación de potencia.
-4. **RC522:** alimentar a **3.3 V** (no 5 V) y respetar niveles SPI — el módulo ya incluye regulador en la mayoría de placas, verificar jumper.
-5. **DHT11:** pull-up ~4.7 kΩ en la línea de datos si el módulo no lo incluye; lectura lenta, espaciada ≥2 s.
-6. **HC-SR04:** ECHO entrega 5 V; el Mega tolera 5 V en entradas, pero si se migra a otra placa usar divisor de tensión.
-7. **Cerradura:** si es solenoide de 12 V, conmutar con relé; si es servo, alimentar aparte y usar `Servo.h` (PWM 50 Hz, 1–2 ms) `[ESTÁNDAR DE CLASE]`.
-8. **Consumibles:** LEDs con resistencia 220–330 Ω; buzzer pasivo con transistor si la corriente supera los ~20 mA del pin.
-9. **Cableado:** agrupar por dominio (lógica / sensores / potencia) y documentar con foto del montaje para las evidencias del informe (≥5 fotos requeridas).
+1. **Alimentación de actuadores:** el Mega no alimenta bobinas de relé ni ventiladores; usar fuente externa dedicada.
+2. **Relés:** módulos optoacoplados (bornes NO/COM); el pin `IN` se excita desde el Mega.
+3. **Tierra común:** GND de la fuente externa, del Mega y de los sensores unidos.
+4. **RC522:** alimentar a **3.3 V**, nunca a 5 V.
+5. **DHT11:** pull-up ~4.7 kΩ en DATA si el módulo no lo trae; no leer más rápido de 1 lectura/s.
+6. **Hall:** módulos con salida en colector abierto funcionan con el pull-up interno; ubicar el imán en la hoja de la puerta.
+7. **LEDs:** resistencia 220–330 Ω. **Buzzer:** pasivo (usa `tone()`); con transistor si supera ~20 mA.
+8. **Cableado:** agrupar por dominio (lógica / sensores / potencia) y fotografiar el montaje (≥5 fotos para el informe).
 
 ---
 
@@ -103,21 +83,9 @@
 | Recurso | Pines usados | ¿Conflicto? |
 |---------|--------------|-------------|
 | SPI (RC522) | 50, 51, 52, 53 | Ninguno — único periférico SPI |
-| I2C (RTC) | 20, 21 | Ninguno |
-| UART0 | 0, 1 | Reservados, sin uso |
-| LCD | 8–13 | Sin conflicto (no son SPI/I2C en Mega) |
-| Keypad | 30–37 | Sin conflicto |
-| Digitales varios | 5–7, 22, 24, 28, 29, 40, 42, 44, 46, 48 | Sin traslape |
-| Analógico | A0 (64) | Sin traslape |
-
-**Pendiente de ajuste físico:** si el keypad usa matriz en pines con PWM no hay problema; si el buzzer requiere Timer específico, reubicar a pin PWM libre (2–13, 44–46).
-
----
-
-## 4. TODOs abiertos sobre este documento
-
-- [ ] Confirmar MCU oficial (D-05) — todo el mapa asume Mega 2560.
-- [ ] Confirmar RTC DS3231 y dirección I2C.
-- [ ] Confirmar tipo de cerradura/pestillo y si requiere relé adicional.
-- [ ] Confirmar método de conteo de personas (HC-SR04 u otro) — D-03.
-- [ ] Confirmar si se requiere LCD en modo 8 bits (actual: 4 bits, estándar del curso).
+| UART0 | 0, 1 | Reservados, sin uso por periféricos |
+| LCD | 8–13 | Ninguno |
+| Keypad | 30–37 | Ninguno |
+| Digitales varios | 5, 6, 7, 22, 40, 44, 46, 48 | Sin traslape |
+| Analógicos | A0, A1 | Sin traslape |
+| Timers | `tone()` usa Timer2 | No afecta pines del LCD, relés ni LEDs (sin PWM en ellos) |

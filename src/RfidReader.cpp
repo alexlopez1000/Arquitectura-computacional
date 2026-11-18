@@ -5,19 +5,27 @@
 
 #include "RfidReader.h"
 #include <SPI.h>
-#include <MFRC522.h>
+#include <string.h>
 
-RfidReader::RfidReader() : cardPending_(false) {}
+RfidReader::RfidReader(uint8_t ssPin, uint8_t rstPin)
+    : mfrc522_(ssPin, rstPin), lastUid_() {}
 
 void RfidReader::begin() {
-    // TODO: SPI.begin(); rfid.PCD_Init();
-    // Pines: SS=PIN_RFID_SS, RST=PIN_RFID_RST (config.h).
+    SPI.begin();
+    mfrc522_.PCD_Init();
 }
 
 bool RfidReader::poll() {
-    // TODO: PICC_IsNewCardPresent + PICC_ReadCardSerial
-    // (ejemplos ReadNUID.ino del curso).
-    return false;
+    if (!mfrc522_.PICC_IsNewCardPresent() || !mfrc522_.PICC_ReadCardSerial()) {
+        return false;
+    }
+    memset(lastUid_.bytes, 0, sizeof(lastUid_.bytes));
+    const uint8_t n = mfrc522_.uid.size < sizeof(lastUid_.bytes)
+                          ? mfrc522_.uid.size : sizeof(lastUid_.bytes);
+    memcpy(lastUid_.bytes, mfrc522_.uid.uidByte, n);
+    mfrc522_.PICC_HaltA();
+    mfrc522_.PCD_StopCrypto1();
+    return true;
 }
 
 RfidUid RfidReader::lastUid() const { return lastUid_; }
