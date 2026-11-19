@@ -12,6 +12,7 @@
  * | taskActuators  | TASK_PERIOD_ACTUATORS_MS | Ventilacion, iluminacion, buzzer    |
  * | taskLcd        | TASK_PERIOD_LCD_MS       | Refresco del LCD 16x2               |
  * | taskFsm        | TASK_PERIOD_FSM_MS       | Transiciones de AccessFSM           |
+ * | taskTelemetry  | TASK_PERIOD_TELEMETRY_MS | Linea [ENV] de telemetria por Serial|
  *
  * loop() solo llama Update() de cada tarea: ninguna usa delay().
  */
@@ -108,6 +109,31 @@ static void runLcd() {
 /** @brief Tarea FSM: evalua temporizadores y transiciones de acceso. */
 static void runFsm() { fsm.update(); }
 
+/**
+ * @brief Tarea telemetria: imprime por Serial una linea compacta con
+ *        T, HR, PMV, LDR y A1 (promedio movil de ANALOG_AVG_SAMPLES y voltaje).
+ *
+ * Ejemplo: `[ENV] T=24.0C H=50% PMV=-0.20 LDR=512 A1=512 (2.50V) Puerta=CER`
+ */
+static void runTelemetry() {
+    const EnvSnapshot s = env.snapshot();
+    const ComfortAction c = comfort.lastAction();
+    Serial.print(F("[ENV] T="));
+    if (s.dhtValid) { Serial.print(s.temperatureC, 1); Serial.print(F("C H=")); Serial.print(s.humidityPct, 0); }
+    else            { Serial.print(F("--C H=--")); }
+    Serial.print(F("% PMV="));
+    if (c.valid) Serial.print(c.pmv, 2);
+    else         Serial.print(F("--"));
+    Serial.print(F(" LDR="));
+    Serial.print(s.lightLevel);
+    Serial.print(F(" A1="));
+    Serial.print(s.auxLevel);
+    Serial.print(F(" ("));
+    Serial.print(s.auxLevel * (ADC_VREF_V / ADC_MAX_COUNT), 2);
+    Serial.print(F("V) Puerta="));
+    Serial.println(door.isOpen() ? F("ABI") : F("CER"));
+}
+
 /* ---------------- Tareas AsyncTaskLib (autoReset = periodicas) ---------------- */
 static AsyncTask taskRfid(TASK_PERIOD_RFID_MS, true, runRfid);
 static AsyncTask taskKeypad(TASK_PERIOD_KEYPAD_MS, true, runKeypad);
@@ -116,6 +142,7 @@ static AsyncTask taskEnv(TASK_PERIOD_ENV_MS, true, runEnv);
 static AsyncTask taskActuators(TASK_PERIOD_ACTUATORS_MS, true, runActuators);
 static AsyncTask taskLcd(TASK_PERIOD_LCD_MS, true, runLcd);
 static AsyncTask taskFsm(TASK_PERIOD_FSM_MS, true, runFsm);
+static AsyncTask taskTelemetry(TASK_PERIOD_TELEMETRY_MS, true, runTelemetry);
 
 /**
  * @brief Inicializacion: modulos, usuarios desde EEPROM y arranque de tareas.
@@ -140,6 +167,7 @@ void setup() {
     taskActuators.Start();
     taskLcd.Start();
     taskFsm.Start();
+    taskTelemetry.Start();
 }
 
 /**
@@ -153,4 +181,5 @@ void loop() {
     taskActuators.Update();
     taskLcd.Update();
     taskFsm.Update();
+    taskTelemetry.Update();
 }

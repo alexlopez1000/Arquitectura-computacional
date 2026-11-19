@@ -64,6 +64,8 @@
 #define PIN_LDR       A0   ///< Sensor de luz LDR (divisor resistivo, ADC)
 #define PIN_ANALOG_AUX A1  ///< Sensor analogico adicional trabajado en clase (ADC)
 #define ANALOG_AVG_SAMPLES 8 ///< Muestras del promedio movil (libreria Average)
+#define ADC_VREF_V         5.0f ///< Referencia del ADC (V) para convertir lecturas a voltaje
+#define ADC_MAX_COUNT      1023.0f ///< Cuenta maxima del ADC de 10 bits
 
 /* ================================================================
  *  ACTUADORES Y SENALIZACION
@@ -129,5 +131,6 @@
 #define TASK_PERIOD_ENV_MS        2000UL  ///< Sensores ambientales + PMV (ms, DHT11 >= 1 s)
 #define TASK_PERIOD_ACTUATORS_MS  50UL    ///< Actualizacion de actuadores (ms)
 #define TASK_PERIOD_LCD_MS        250UL   ///< Refresco del LCD (ms)
+#define TASK_PERIOD_TELEMETRY_MS  2000UL  ///< Telemetria ambiental por Serial (ms)
 
 #endif /* CONFIG_H */

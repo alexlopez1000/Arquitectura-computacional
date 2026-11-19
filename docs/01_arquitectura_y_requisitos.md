@@ -71,7 +71,7 @@
 
 | # | Criterio | Peso | Requisitos vinculados | Entregable de diseño |
 |---|----------|------|-----------------------|----------------------|
-| 1 | Diseño de Tareas asincrónicas | **12%** | RF-18 | 7 `AsyncTask` (§7) |
+| 1 | Diseño de Tareas asincrónicas | **12%** | RF-18 | 8 `AsyncTask` (§7) |
 | 2 | FSM | **8%** | RF-19, RF-14 (estados visibles) | `StateMachineLib`, tabla de transiciones (§6) |
 | 3 | Integración Hardware (sensores/actuadores) | **10%** | RF-01, RF-15..17, RF-10 | Pinout confirmado (`02_pinout.md`) |
 | 4 | Interfaz de Usuario | **8%** | RF-14, RF-21 | Maqueta LCD 16x2, enmascarado, cuenta regresiva |
@@ -129,7 +129,7 @@
 | `AuthManager` | Validación secuencial tarjeta → contraseña y contador de fallos |
 | `AccessFSM` | FSM 2FA sobre `StateMachineLib` |
 | `DisplayUI` | Pantallas del LCD por estado |
-| `main.cpp` | Instancia módulos y las 7 `AsyncTask`; `loop()` solo llama `Update()` |
+| `main.cpp` | Instancia módulos y las 8 `AsyncTask`; `loop()` solo llama `Update()` |
 
 Los módulos se comunican por llamadas explícitas desde las tareas (snapshots e interfaces públicas), sin variables globales compartidas entre módulos.
 
@@ -177,6 +177,7 @@ Teclas: dígitos `0–9` = clave, `*` = borrar último dígito, `#` = confirmar,
 | `taskActuators` | Actualizar patrones de buzzer/LED y relés | 50 ms |
 | `taskLcd` | Refrescar LCD 16x2 | 250 ms |
 | `taskFsm` | Evaluar transiciones de `AccessFSM` (`StateMachine::Update()`) | 20 ms |
+| `taskTelemetry` | Línea `[ENV]` por Serial: T, HR, PMV, LDR, A1 filtrado (ADC y V), puerta | 2000 ms |
 
 Todas se crean con `AutoReset = true` y se despachan desde `loop()` con `Update()`. `AsyncTaskLib` mide internamente en `micros()` con resta sin signo (segura ante desbordamiento); la lógica de la aplicación usa `millis()`.
 
