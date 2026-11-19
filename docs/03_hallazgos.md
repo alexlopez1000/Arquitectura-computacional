@@ -229,18 +229,31 @@ final (mínimo 4 requeridos por la plantilla).
   |---|---|---|---|
   | Blue Card | `01:02:03:04` | Seguridad | `1234` |
   | Green Card | `11:22:33:44` | Operario | `5678` |
-  | NFC Tag (7 bytes) | `04:11:22:33:44:55:66` | Gerente | `2468` |
+  | NFC Tag (7 bytes) | `04:11:22:33:44:55:66` (`04:11:22:33` en `env:wokwi`) | Gerente | `2468` |
 
   Red y Yellow Card no están registradas (sirven para probar `ERR`/`ALR`).
   En el laboratorio, cambiar los UID por los de las tarjetas reales e
   incrementar `EEPROM_LAYOUT_VERSION`.
+- **Limitación del `board-mfrc522` de Wokwi (observada en simulación):**
+  al presentar el NFC Tag (`04:11:22:33:44:55:66`) el simulador no
+  completa el cascade level 2 de la anticolisión ISO 14443-3 y el
+  driver MFRC522 recibe solo 4 bytes; Serial muestra
+  `UID: 04 11 22 33 (4 bytes)`. Con el usuario registrado con 7 bytes,
+  `rfidUidEquals()` lo rechaza (`ERR Intento 1/3`). Por eso, con
+  `WOKWI_SIMULATION=1` el Gerente usa `{0x04, 0x11, 0x22, 0x33}, 4`.
+  El firmware real (`env:megaatmega2560`, `WOKWI_SIMULATION=0`)
+  conserva el UID de 7 bytes y el soporte completo 4/7 bytes; la
+  lectura de 7 bytes solo puede validarse con una tarjeta física
+  Ultralight/NTAG en el laboratorio.
 - **Entorno `[env:wokwi]`** (`platformio.ini`): hereda de
-  `megaatmega2560` y agrega dos `-D`:
+  `megaatmega2560` y agrega tres `-D`:
   - `DHT_TYPE=DHT22`: Wokwi solo simula DHT22, y su trama decodificada
     como DHT11 da valores erróneos (p. ej. 24 °C / 40 % → −1 °C / 15 %).
   - `LDR_ADC_RISES_WITH_DARK=1`: el módulo LDR de Wokwi da mayor ADC
     con más oscuridad; el firmware lo invierte (`1023 − ADC`) para
     mantener la convención mayor = más luz.
+  - `WOKWI_SIMULATION=1`: usuario Gerente con el UID truncado a 4 bytes
+    (ver la limitación anterior).
   El firmware del hardware real sigue siendo `pio run -e megaatmega2560`.
 - **`wokwi.toml`:** apunta a `.pio/build/wokwi/firmware.hex` y
   `firmware.elf`. Compilar con `pio run -e wokwi` y abrir con la

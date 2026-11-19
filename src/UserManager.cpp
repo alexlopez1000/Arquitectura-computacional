@@ -17,7 +17,12 @@ namespace {
 const UserRecord kDefaultUsers[NUM_USERS] PROGMEM = {
     { { {0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00}, 4 }, Profile::SECURITY, "1234" },
     { { {0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00}, 4 }, Profile::OPERATOR, "5678" },
+#if WOKWI_SIMULATION
+    // Wokwi no completa el cascade level 2: el NFC Tag se lee como 04:11:22:33.
+    { { {0x04, 0x11, 0x22, 0x33, 0x00, 0x00, 0x00}, 4 }, Profile::MANAGER,  "2468" },
+#else
     { { {0x04, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66}, 7 }, Profile::MANAGER,  "2468" },
+#endif
 };
 
 bool isValidPassword(const char* pwd) {

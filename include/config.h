@@ -45,6 +45,9 @@
 #define RFID_UID_SIZE_SINGLE 4 ///< Longitud de UID MIFARE Classic (bytes)
 #define RFID_UID_SIZE_DOUBLE 7 ///< Longitud de UID MIFARE Ultralight/NTAG (bytes)
 #define RFID_UID_MAX_SIZE    7 ///< Bytes reservados por UID
+#ifndef WOKWI_SIMULATION
+#define WOKWI_SIMULATION     0 ///< 1 en [env:wokwi]: el board-mfrc522 de Wokwi entrega solo 4 bytes del NFC Tag de 7
+#endif
 
 /* ================================================================
  *  SENSOR DE EFECTO HALL (estado de puerta)
