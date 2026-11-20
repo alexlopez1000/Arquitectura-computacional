@@ -118,7 +118,7 @@
 
 | Módulo | Responsabilidad |
 |--------|-----------------|
-| `RfidReader` | Polling no bloqueante del MFRC522, entrega UID de 4 bytes |
+| `RfidReader` | Polling no bloqueante del MFRC522, entrega UID de 4 o 7 bytes (`RfidUid`) |
 | `KeypadReader` | Escaneo matricial 4x4 con anti-rebote por `millis()` |
 | `DoorSensor` | Lectura del Hall (pull-up, anti-rebote) |
 | `EnvSensors` | DHT11 + LDR + A1 (filtrados con `Average`) → `EnvSnapshot` |
